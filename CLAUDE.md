@@ -1,0 +1,3 @@
+- this project should be coded in python
+- use semantic kernel built in modules and functionalities whenever possible
+- make sure your understanding and design is based on the latest version for key packages like semantic kernel and pydantic or any other AI related packages if they are used
