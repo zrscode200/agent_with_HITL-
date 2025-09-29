@@ -14,6 +14,7 @@ from src.plugins.plugin_manager import PluginManager
 from src.policies.policy_engine import PolicyEngine
 from src.reasoning.plan_react.process import PlanReactCoordinator
 from src.runtime.tool_gateway import ToolGateway
+from src.policies.approval_service import ApprovalService
 
 
 @dataclass(slots=True)
@@ -27,6 +28,7 @@ class AgentRuntime:
     plan_react: PlanReactCoordinator
     policy_engine: PolicyEngine
     tool_gateway: ToolGateway
+    approval_service: ApprovalService
     telemetry_service: Optional[TelemetryService] = None
 
     def dispose(self) -> None:
@@ -37,4 +39,5 @@ class AgentRuntime:
         self.plan_react = None  # type: ignore[assignment]
         self.policy_engine = None  # type: ignore[assignment]
         self.tool_gateway = None  # type: ignore[assignment]
+        self.approval_service = None  # type: ignore[assignment]
         self.kernel.remove_all_services()

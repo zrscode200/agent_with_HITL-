@@ -11,6 +11,7 @@ from src.policies.policy_engine import PolicyEngine
 from src.policies.policy_models import PolicyDecision, WorkflowPolicy
 from src.plugins.tooling_metadata import RiskLevel
 from src.runtime.tool_gateway import ToolGateway
+from src.policies.approval_service import ConsoleApprovalService
 
 
 @pytest.fixture
@@ -28,10 +29,13 @@ async def gateway() -> ToolGateway:
         )
     )
 
+    approval_service = ConsoleApprovalService(auto_approve=True)
+
     return ToolGateway(
         kernel=kernel,
         plugin_manager=manager,
         policy_engine=policy_engine,
+        approval_service=approval_service,
         logger=logging.getLogger("gateway"),
     )
 
@@ -45,3 +49,11 @@ def test_policy_decision_exposed(gateway: ToolGateway):
     tools = gateway.list_authorized_tools("demo")
     decision = tools["DocumentProcessing.validate_document"].policy.decision
     assert decision in {PolicyDecision.ALLOW, PolicyDecision.REQUIRE_HUMAN_APPROVAL}
+
+
+def test_ensure_approval_resolves(gateway: ToolGateway):
+    tools = gateway.list_authorized_tools("demo")
+    context = tools["DocumentProcessing.validate_document"]
+    approved = gateway.ensure_approval("demo", context)
+    assert approved is True
+    assert context.approved is True

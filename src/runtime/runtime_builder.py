@@ -62,10 +62,17 @@ class AgentRuntimeBuilder:
 
         policy_engine = self._build_policy_engine(plugin_manager)
 
+        approval_service = ConsoleApprovalService(
+            auto_approve=not self._settings.agent_platform.enable_human_in_the_loop,
+            logger=self._logger.getChild("ApprovalService"),
+        )
+
         tool_gateway = ToolGateway(
             kernel=self._kernel,
             plugin_manager=plugin_manager,
             policy_engine=policy_engine,
+            approval_service=approval_service,
+            telemetry=self._telemetry_service,
             logger=self._logger.getChild("ToolGateway"),
         )
 
@@ -77,6 +84,7 @@ class AgentRuntimeBuilder:
             plan_react=plan_react,
             policy_engine=policy_engine,
             tool_gateway=tool_gateway,
+            approval_service=approval_service,
             telemetry_service=self._telemetry_service,
         )
 

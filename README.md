@@ -19,10 +19,12 @@ A comprehensive AI agent platform built on Microsoft's Semantic Kernel with inte
 agent-platform/
 ├── src/
 │   ├── agents/               # SK Agent Framework implementations
-│   ├── plugins/              # Custom tools and MCP connectors
+│   ├── plugins/              # Custom tools with governance metadata
+│   ├── policies/             # HITL policy engine and models
 │   ├── filters/              # Security and telemetry filters
-│   ├── services/             # Core platform services
-│   └── observability/        # OpenTelemetry integration
+│   ├── observability/        # OpenTelemetry integration
+│   ├── reasoning/            # Plan→ReAct pipeline and strategies
+│   └── runtime/              # Runtime builder, tool gateway, aggregates
 ├── examples/                 # Comprehensive demos
 ├── tests/                    # Unit tests (coming soon)
 ├── config.py                 # Configuration management
@@ -109,6 +111,19 @@ async def main():
 asyncio.run(main())
 ```
 
+### Inspect Tool Policies
+
+```python
+from src.reasoning.plan_react.process import PlanReactCoordinator
+
+tools = runtime.tool_gateway.list_authorized_tools(PlanReactCoordinator.WORKFLOW_ID)
+for qualified_name, context in tools.items():
+    print(
+        f"{qualified_name}: decision={context.policy.decision.value}, "
+        f"risk={context.definition.risk_level.value}"
+    )
+```
+
 ### Custom Plugin Development
 
 ```python
@@ -178,7 +193,8 @@ responses = await orchestrator.execute_concurrent_workflow(
 ### 🔧 **Advanced Plugin System**
 - `BasePlugin` class for standardized plugin development
 - Automatic function registration with SK's kernel
-- Built-in security validation and telemetry collection
+- Governance metadata via `@tool_spec` (risk, approvals, schemas)
+- Tool gateway + policy engine for workflow-specific activation
 - Support for async operations and complex data types
 
 ### 🛡️ **Enterprise Security**
