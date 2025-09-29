@@ -20,6 +20,9 @@ from src.reasoning.plan_react.models import (
     PlanReactRequest,
     PlanReactResult,
 )
+from src.context.context_assembler import AssembledContext
+from src.context.workflow_context import WorkflowContextManager
+from src.observability.feedback_store import FeedbackStore
 from src.reasoning.plan_react.steps import PlanReactExecutorStep, PlanReactPlannerStep
 
 _START_EVENT_ID = "PlanReact.Start"
@@ -39,18 +42,35 @@ class PlanReactCoordinator:
         kernel: Kernel,
         config: PlanReactConfiguration,
         telemetry_service: Optional[TelemetryService] = None,
+        context_manager: Optional[WorkflowContextManager] = None,
+        feedback_store: Optional[FeedbackStore] = None,
         logger: Optional[logging.Logger] = None,
     ) -> None:
         self._kernel = kernel
         self._config = config
         self._telemetry = telemetry_service
         self._logger = logger or logging.getLogger(self.__class__.__name__)
+        self._context_manager = context_manager
+        self._feedback_store = feedback_store
 
         self._builder = self._compose_process()
 
-    async def run(self, request: PlanReactRequest | str, step_budget: Optional[int] = None) -> PlanReactResult:
+    async def run(
+        self,
+        request: PlanReactRequest | str,
+        *,
+        step_budget: Optional[int] = None,
+        context: Optional[AssembledContext] = None,
+    ) -> PlanReactResult:
         """Execute the pipeline for the supplied request."""
+        if context is None and self._context_manager is not None:
+            context = self._context_manager.assemble(self.WORKFLOW_ID)
+
         normalized_request = self._normalize_request(request, step_budget)
+        if context is not None:
+            normalized_request.context = dict(normalized_request.context)
+            normalized_request.context["prompt_context"] = context.as_prompt()
+            normalized_request.context["prompt_profile"] = context.profile.name
 
         kernel_process = self._builder.build()
         KernelProcess.model_rebuild()
@@ -161,6 +181,28 @@ class PlanReactCoordinator:
                 if isinstance(state, PlanReactExecutorState):
                     return state
         raise RuntimeError("Executor step state not found")
+
+    def register_pre_run_note(self, note: str) -> None:
+        if self._context_manager:
+            self._context_manager.register_human_note(self.WORKFLOW_ID, "pre", note)
+        if self._feedback_store:
+            self._feedback_store.record(
+                workflow_id=self.WORKFLOW_ID,
+                phase="pre",
+                note=note,
+                metadata={},
+            )
+
+    def register_post_run_feedback(self, note: str) -> None:
+        if self._context_manager:
+            self._context_manager.register_human_note(self.WORKFLOW_ID, "post", note)
+        if self._feedback_store:
+            self._feedback_store.record(
+                workflow_id=self.WORKFLOW_ID,
+                phase="post",
+                note=note,
+                metadata={},
+            )
 
 
 __all__ = ["PlanReactCoordinator", "PlanReactConfiguration"]

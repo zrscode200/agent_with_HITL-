@@ -38,6 +38,7 @@ def test_base_plugin_collects_metadata_defaults():
     tool = metadata.tools["echo"]
     assert tool.risk_level == RiskLevel.LOW
     assert tool.inputs[0].name == "value"
+    assert tool.field_descriptions == {}
 
 
 def test_document_processing_plugin_declares_risks():
@@ -47,6 +48,7 @@ def test_document_processing_plugin_declares_risks():
     assert len(metadata.tools) == 4
     assert metadata.tools["validate_document"].approval == ApprovalRequirement.POLICY
     assert metadata.tools["validate_document"].risk_level == RiskLevel.HIGH
+    assert "issues" in metadata.tools["validate_document"].field_descriptions
 
 
 def test_plugin_manager_manifest_exposes_tools():

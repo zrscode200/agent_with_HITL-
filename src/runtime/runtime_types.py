@@ -15,6 +15,8 @@ from src.policies.policy_engine import PolicyEngine
 from src.reasoning.plan_react.process import PlanReactCoordinator
 from src.runtime.tool_gateway import ToolGateway
 from src.policies.approval_service import ApprovalService
+from src.context.workflow_context import WorkflowContextManager
+from src.observability.feedback_store import FeedbackStore
 
 
 @dataclass(slots=True)
@@ -29,6 +31,8 @@ class AgentRuntime:
     policy_engine: PolicyEngine
     tool_gateway: ToolGateway
     approval_service: ApprovalService
+    context_manager: WorkflowContextManager
+    feedback_store: FeedbackStore
     telemetry_service: Optional[TelemetryService] = None
 
     def dispose(self) -> None:
@@ -40,4 +44,6 @@ class AgentRuntime:
         self.policy_engine = None  # type: ignore[assignment]
         self.tool_gateway = None  # type: ignore[assignment]
         self.approval_service = None  # type: ignore[assignment]
+        self.context_manager = None  # type: ignore[assignment]
+        self.feedback_store = None  # type: ignore[assignment]
         self.kernel.remove_all_services()

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Optional
 
 from semantic_kernel import Kernel
@@ -21,6 +22,10 @@ from src.policies.policy_models import WorkflowPolicy
 from src.reasoning.plan_react.process import PlanReactCoordinator, PlanReactConfiguration
 from src.runtime.runtime_types import AgentRuntime
 from src.runtime.tool_gateway import ToolGateway
+from src.context.runbook_loader import RunbookLibrary
+from src.context.example_loader import FewShotLibrary
+from src.context.workflow_context import WorkflowContextManager
+from src.observability.feedback_store import FeedbackStore
 
 
 class AgentRuntimeBuilder:
@@ -53,10 +58,15 @@ class AgentRuntimeBuilder:
         agent_factory = AgentFactory(self._kernel, self._logger)
         agent_orchestrator = AgentOrchestrator(self._logger)
 
+        context_manager = self._build_context_manager()
+        feedback_store = FeedbackStore()
+
         plan_react = PlanReactCoordinator(
             kernel=self._kernel,
             config=PlanReactConfiguration(),
             telemetry_service=self._telemetry_service,
+            context_manager=context_manager,
+            feedback_store=feedback_store,
             logger=self._logger.getChild("PlanReact"),
         )
 
@@ -74,6 +84,8 @@ class AgentRuntimeBuilder:
             policy_engine=policy_engine,
             approval_service=approval_service,
             telemetry=self._telemetry_service,
+            context_manager=context_manager,
+            feedback_store=feedback_store,
             logger=self._logger.getChild("ToolGateway"),
         )
 
@@ -86,6 +98,8 @@ class AgentRuntimeBuilder:
             policy_engine=policy_engine,
             tool_gateway=tool_gateway,
             approval_service=approval_service,
+            context_manager=context_manager,
+            feedback_store=feedback_store,
             telemetry_service=self._telemetry_service,
         )
 
@@ -168,6 +182,31 @@ class AgentRuntimeBuilder:
         policy_logger.debug("Initial policy evaluation for plan-react: %s", decisions)
 
         return policy_engine
+
+    def _build_context_manager(self) -> WorkflowContextManager:
+        manager = WorkflowContextManager()
+        base_dir = Path(__file__).resolve().parent.parent.parent / "resources" / "context"
+
+        runbook_path = base_dir / "runbooks.json"
+        if runbook_path.exists():
+            try:
+                library = RunbookLibrary.from_json(runbook_path)
+                manager.register_runbook(
+                    PlanReactCoordinator.WORKFLOW_ID,
+                    library.get("plan-react-default"),
+                )
+            except KeyError:
+                self._logger.warning("Runbook for plan-react-default not found in %s", runbook_path)
+
+        examples_path = base_dir / "examples.json"
+        if examples_path.exists():
+            library = FewShotLibrary.from_json(examples_path)
+            manager.register_examples(
+                PlanReactCoordinator.WORKFLOW_ID,
+                library.get(PlanReactCoordinator.WORKFLOW_ID),
+            )
+
+        return manager
 
     async def _create_default_agents(self, runtime: AgentRuntime) -> None:
         """Provision baseline agents for demos and regression coverage."""

@@ -56,6 +56,8 @@ class ToolDefinition:
     output_description: Optional[str] = None
     examples: List[ToolExample] = field(default_factory=list)
     tags: Dict[str, str] = field(default_factory=dict)
+    field_descriptions: Dict[str, str] = field(default_factory=dict)
+    sample_output: Optional[str] = None
 
     def with_updates(
         self,
@@ -98,6 +100,8 @@ def tool_spec(
     output_description: Optional[str] = None,
     examples: Optional[List[ToolExample]] = None,
     tags: Optional[Dict[str, str]] = None,
+    field_descriptions: Optional[Dict[str, str]] = None,
+    sample_output: Optional[str] = None,
 ) -> Callable:
     """Attach governance metadata to a kernel_function."""
 
@@ -111,6 +115,8 @@ def tool_spec(
             output_description=output_description,
             examples=list(examples) if examples else [],
             tags=dict(tags) if tags else {},
+            field_descriptions=dict(field_descriptions) if field_descriptions else {},
+            sample_output=sample_output,
         )
         setattr(func, TOOL_METADATA_ATTR, metadata)
         return func

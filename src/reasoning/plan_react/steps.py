@@ -101,6 +101,8 @@ class PlanReactPlannerStep(KernelProcessStep[PlanReactPlannerState]):
                 )
             )
 
+        context_snippet = request.context.get("prompt_context", "")
+
         plan = PlanReactPlan(
             task=request.task,
             rationale="Generated heuristically due to missing chat completion service.",
@@ -109,6 +111,8 @@ class PlanReactPlannerStep(KernelProcessStep[PlanReactPlannerState]):
             plan=plan_items,
             context=request.context,
         )
+        if context_snippet:
+            plan.rationale += " Context provided: " + context_snippet[:200]
         return plan
 
     def _parse_plan_from_json(self, content: str) -> PlanReactPlan | None:
@@ -128,7 +132,8 @@ class PlanReactPlannerStep(KernelProcessStep[PlanReactPlannerState]):
 
     def _planner_prompt(self, request: PlanReactRequest) -> str:
         hints = "\n".join(f"- {hint}" for hint in request.hints) if request.hints else "- None provided"
-        return (
+        context_text = request.context.get("prompt_context")
+        parts = [
             "You are a planning specialist. Craft a concise plan expressed as JSON with the keys:\n"
             "task (string), rationale (string), step_budget (int), allow_step_extension (bool),"
             " plan (list of items with step_number, title, success_criteria).\n"
@@ -136,8 +141,11 @@ class PlanReactPlannerStep(KernelProcessStep[PlanReactPlannerState]):
             f"Task: {request.task}\n"
             f"Step budget: {request.step_budget}\n"
             f"Hints:\n{hints}\n"
-            "Return only valid JSON."
-        )
+        ]
+        if context_text:
+            parts.append("Context:\n" + context_text)
+        parts.append("Return only valid JSON.")
+        return "".join(parts)
 
 
 class PlanReactExecutorStep(KernelProcessStep[PlanReactExecutorState]):

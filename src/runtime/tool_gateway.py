@@ -15,6 +15,8 @@ from src.policies.policy_engine import PolicyEngine
 from src.policies.policy_models import PolicyDecision, PolicyEvaluation
 from src.observability.telemetry_service import TelemetryService
 from src.policies.approval_service import ApprovalService, ApprovalRequest
+from src.context.workflow_context import WorkflowContextManager
+from src.observability.feedback_store import FeedbackStore
 
 
 @dataclass(slots=True)
@@ -41,6 +43,8 @@ class ToolGateway:
         policy_engine: PolicyEngine,
         approval_service: ApprovalService,
         telemetry: Optional[TelemetryService] = None,
+        context_manager: Optional[WorkflowContextManager] = None,
+        feedback_store: Optional[FeedbackStore] = None,
         logger: Optional[logging.Logger] = None,
     ) -> None:
         self._kernel = kernel
@@ -48,6 +52,8 @@ class ToolGateway:
         self._policy_engine = policy_engine
         self._approval_service = approval_service
         self._telemetry = telemetry
+        self._context_manager = context_manager
+        self._feedback_store = feedback_store
         self._logger = logger or logging.getLogger(self.__class__.__name__)
 
     @property
@@ -133,6 +139,24 @@ class ToolGateway:
                 approved=decision.approved,
                 reviewer=decision.reviewer,
                 request_id=decision.request_id,
+            )
+
+        if self._context_manager and decision.reason:
+            self._context_manager.register_human_note(
+                workflow_id,
+                "mid",
+                f"{decision.reviewer}: {decision.reason}",
+            )
+        if self._feedback_store and decision.reason:
+            self._feedback_store.record(
+                workflow_id,
+                "mid",
+                decision.reason,
+                metadata={
+                    "plugin": context.plugin_name,
+                    "tool": context.tool_name,
+                    "approved": decision.approved,
+                },
             )
 
         return context.approved

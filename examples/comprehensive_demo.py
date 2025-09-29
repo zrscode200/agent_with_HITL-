@@ -140,6 +140,13 @@ class ComprehensiveDemo:
                     )
             print()
 
+            preview_context = runtime.context_manager.assemble(
+                PlanReactCoordinator.WORKFLOW_ID,
+                clear_notes=False,
+            ).as_prompt()
+            print("Default context preview (truncated):")
+            print(preview_context[:300] + ("..." if len(preview_context) > 300 else ""))
+
             # 1. Document Analysis Plugin
             self.logger.info("Demonstrating DocumentProcessing plugin")
 

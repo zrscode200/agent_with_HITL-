@@ -87,6 +87,7 @@ python main.py --mode interactive
 # Run with debug logging
 python main.py --mode demo --log-level DEBUG
 ```
+Interactive mode supports `/note <text>` for pre-run guidance and `/feedback <text>` for retrospective comments; both are recorded in `logs/feedback.jsonl`.
 
 ## Usage Examples
 
@@ -208,6 +209,7 @@ responses = await orchestrator.execute_concurrent_workflow(
 - Automatic function registration with SK's kernel
 - Governance metadata via `@tool_spec` (risk, approvals, schemas)
 - Tool gateway + policy engine for workflow-specific activation
+- Data dictionaries & sample outputs embedded in tool metadata
 - Support for async operations and complex data types
 
 ### 🛡️ **Enterprise Security**

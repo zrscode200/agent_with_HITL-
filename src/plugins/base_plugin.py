@@ -162,6 +162,8 @@ class BasePlugin(ABC):
                     description=description,
                     risk_level=self.default_risk_level,
                     approval=ApprovalRequirement.NONE,
+                    field_descriptions={},
+                    sample_output=None,
                 )
 
             definitions[name] = metadata

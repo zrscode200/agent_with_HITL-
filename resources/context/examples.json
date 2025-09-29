@@ -1,0 +1,12 @@
+{
+  "examples": {
+    "plan-react": [
+      {
+        "title": "Network RCA Example",
+        "task": "Investigate packet loss on edge routers",
+        "reasoning": "Gather interface stats, correlate with recent changes, identify root cause",
+        "output": "Plan with interface checks, log collection, escalation step"
+      }
+    ]
+  }
+}

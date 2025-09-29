@@ -16,6 +16,7 @@ from examples.comprehensive_demo import ComprehensiveDemo
 from src.observability.telemetry_service import TelemetryService
 from src.runtime.runtime_builder import AgentRuntimeBuilder
 from src.runtime.runtime_types import AgentRuntime
+from src.reasoning.plan_react.process import PlanReactCoordinator
 from config import Settings
 
 
@@ -116,6 +117,8 @@ async def process_command(command: str, runtime: AgentRuntime) -> None:
         print("  /agents   - List available agents")
         print("  /plugins  - List available plugins")
         print("  /validate - Validate configuration")
+        print("  /note <text> - Add pre-run human note for Plan→ReAct")
+        print("  /feedback <text> - Record post-run feedback")
 
     elif cmd == 'status':
         info = _runtime_service_info(runtime)
@@ -145,6 +148,32 @@ async def process_command(command: str, runtime: AgentRuntime) -> None:
         if validation.failed_plugins:
             for name, error in validation.failed_plugins.items():
                 print(f"  - {name}: {error}")
+
+    elif cmd.startswith('note'):
+        note = command.partition(' ')[2].strip()
+        if not note:
+            note = input("Enter note: ").strip()
+        runtime.context_manager.register_human_note(PlanReactCoordinator.WORKFLOW_ID, 'pre', note)
+        runtime.feedback_store.record(
+            workflow_id=PlanReactCoordinator.WORKFLOW_ID,
+            phase='pre',
+            note=note,
+            metadata={'source': 'cli'},
+        )
+        print("Stored pre-run note.")
+
+    elif cmd.startswith('feedback'):
+        feedback = command.partition(' ')[2].strip()
+        if not feedback:
+            feedback = input("Enter feedback: ").strip()
+        runtime.context_manager.register_human_note(PlanReactCoordinator.WORKFLOW_ID, 'post', feedback)
+        runtime.feedback_store.record(
+            workflow_id=PlanReactCoordinator.WORKFLOW_ID,
+            phase='post',
+            note=feedback,
+            metadata={'source': 'cli'},
+        )
+        print("Recorded feedback.")
 
     else:
         print(f"❌ Unknown command: {command}")

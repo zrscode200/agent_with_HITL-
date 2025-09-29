@@ -1,0 +1,20 @@
+{
+  "runbooks": [
+    {
+      "id": "plan-react-default",
+      "description": "Baseline runbook for Plan→ReAct workflows",
+      "sections": [
+        {
+          "title": "Initial Triage",
+          "content": "1. Gather task summary\n2. Identify affected systems\n3. Check existing alerts",
+          "priority": 20
+        },
+        {
+          "title": "Escalation Guidance",
+          "content": "Escalate immediately if customer impact is critical or data loss is suspected.",
+          "priority": 10
+        }
+      ]
+    }
+  ]
+}

@@ -92,6 +92,11 @@ class HttpWebPlugin(BasePlugin):
         ],
         output_description="JSON payload describing status, headers, and body snippet",
         tags={"category": "http", "method": "GET"},
+        field_descriptions={
+            "status_code": "HTTP status code returned by the server",
+            "headers": "Response headers",
+            "content": "Response body or snippet",
+        },
     )
     @kernel_function(
         name="http_get",
@@ -184,6 +189,11 @@ class HttpWebPlugin(BasePlugin):
         ],
         output_description="JSON payload with status code, response headers, and body",
         tags={"category": "http", "method": "POST"},
+        field_descriptions={
+            "status_code": "HTTP status code",
+            "headers": "Response headers",
+            "content": "Response JSON content or raw text",
+        },
     )
     @kernel_function(
         name="http_post",
@@ -286,6 +296,11 @@ class HttpWebPlugin(BasePlugin):
         ],
         output_description="JSON payload with API response data and metadata",
         tags={"category": "http", "method": "GET", "format": "json"},
+        field_descriptions={
+            "data": "Parsed JSON response",
+            "status_code": "HTTP status code",
+            "response_size": "Number of bytes in the response",
+        },
     )
     @kernel_function(
         name="fetch_json_data",
@@ -385,6 +400,11 @@ class HttpWebPlugin(BasePlugin):
         ],
         output_description="JSON payload reporting status code, latency, and redirects",
         tags={"category": "http", "action": "health-check"},
+        field_descriptions={
+            "status_code": "HTTP status code",
+            "response_time_ms": "Latency measurement in milliseconds",
+            "redirect_url": "Final URL after redirects, if any",
+        },
     )
     @kernel_function(
         name="check_url_status",

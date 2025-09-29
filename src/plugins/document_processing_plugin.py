@@ -87,6 +87,12 @@ class DocumentProcessingPlugin(BasePlugin):
         ],
         output_description="JSON payload summarizing key metrics, topics, and language stats",
         tags={"category": "document-analysis"},
+        field_descriptions={
+            "word_count": "Number of words in the document",
+            "language": "Detected language code",
+            "key_topics": "List of detected topics",
+        },
+        sample_output='{"word_count": 500, "language": "en", "key_topics": ["SLA", "Pricing"]}',
     )
     @kernel_function(
         name="analyze_document",
@@ -143,6 +149,12 @@ class DocumentProcessingPlugin(BasePlugin):
         ],
         output_description="JSON payload detailing validation status, issues, and warnings",
         tags={"category": "document-validation"},
+        field_descriptions={
+            "is_valid": "Boolean indicating whether document passed checks",
+            "issues": "List of blocking validation issues",
+            "warnings": "List of non-blocking warnings",
+        },
+        sample_output='{"is_valid": false, "issues": ["Missing signature page"], "warnings": []}',
     )
     @kernel_function(
         name="validate_document",
@@ -197,6 +209,10 @@ class DocumentProcessingPlugin(BasePlugin):
         ],
         output_description="JSON payload listing extracted items with metadata",
         tags={"category": "document-extraction"},
+        field_descriptions={
+            "items": "List of extracted values",
+            "information_type": "Extraction category",
+        },
     )
     @kernel_function(
         name="extract_information",
@@ -252,6 +268,10 @@ class DocumentProcessingPlugin(BasePlugin):
         ],
         output_description="JSON payload containing the transformed content",
         tags={"category": "document-transformation"},
+        field_descriptions={
+            "content": "Transformed document content",
+            "target_format": "Requested output format",
+        },
     )
     @kernel_function(
         name="transform_document",

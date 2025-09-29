@@ -95,7 +95,12 @@ class ConsoleApprovalService(ApprovalService):
 
         approved = answer in {"y", "yes"}
         reviewer = "console"
-        reason = "approved via console" if approved else "denied via console"
+
+        comment = ""
+        if not self._auto_approve:
+            comment = self._input_fn("Optional note for context (press Enter to skip): ").strip()
+
+        reason = comment or ("approved via console" if approved else "denied via console")
 
         self._logger.info(
             "Approval %s for %s.%s (workflow %s)",
@@ -105,24 +110,12 @@ class ConsoleApprovalService(ApprovalService):
             request.workflow_id,
         )
 
-        decision = ApprovalDecision(
+        return ApprovalDecision(
             request_id=request.request_id,
             approved=approved,
             reviewer=reviewer,
             reason=reason,
         )
-
-        if self._telemetry:
-            self._telemetry.record_approval_event(
-                workflow_id=request.workflow_id,
-                plugin_name=request.plugin_name,
-                tool_name=request.tool_name,
-                approved=decision.approved,
-                reviewer=decision.reviewer,
-                request_id=decision.request_id,
-            )
-
-        return decision
 
 
 __all__ = [
