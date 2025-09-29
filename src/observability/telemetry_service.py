@@ -197,6 +197,56 @@ class TelemetryService:
 
         return span
 
+    def record_policy_decision(
+        self,
+        *,
+        workflow_id: str,
+        plugin_name: str,
+        tool_name: str,
+        decision: str,
+        risk_level: str,
+        rationale: str,
+    ) -> None:
+        """Record telemetry for a policy decision."""
+        self.record_agent_execution(
+            agent_name="PolicyEngine",
+            duration_seconds=0.0,
+            success=decision != "block",
+            tags={
+                "workflow_id": workflow_id,
+                "plugin": plugin_name,
+                "tool": tool_name,
+                "decision": decision,
+                "risk_level": risk_level,
+                "rationale": rationale,
+            },
+        )
+
+    def record_approval_event(
+        self,
+        *,
+        workflow_id: str,
+        plugin_name: str,
+        tool_name: str,
+        approved: bool,
+        reviewer: str,
+        request_id: str,
+    ) -> None:
+        """Record telemetry when an approval decision is made."""
+        self.record_agent_execution(
+            agent_name="ApprovalService",
+            duration_seconds=0.0,
+            success=approved,
+            tags={
+                "workflow_id": workflow_id,
+                "plugin": plugin_name,
+                "tool": tool_name,
+                "approved": str(approved).lower(),
+                "reviewer": reviewer,
+                "request_id": request_id,
+            },
+        )
+
     def _initialize_tracing(self, service_name: str, service_version: str) -> None:
         """Initialize distributed tracing."""
         observability_config = self._settings.observability

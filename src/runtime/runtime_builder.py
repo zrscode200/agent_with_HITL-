@@ -64,6 +64,7 @@ class AgentRuntimeBuilder:
 
         approval_service = ConsoleApprovalService(
             auto_approve=not self._settings.agent_platform.enable_human_in_the_loop,
+            telemetry=self._telemetry_service,
             logger=self._logger.getChild("ApprovalService"),
         )
 

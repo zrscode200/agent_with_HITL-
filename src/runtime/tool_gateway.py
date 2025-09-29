@@ -94,8 +94,15 @@ class ToolGateway:
                 )
                 authorized[qualified_name] = context
 
-                if self._telemetry:
-                    self._record_decision(workflow_id, context)
+        if self._telemetry:
+            self._telemetry.record_policy_decision(
+                workflow_id=workflow_id,
+                plugin_name=context.plugin_name,
+                tool_name=context.tool_name,
+                decision=context.policy.decision.value,
+                risk_level=context.definition.risk_level.value,
+                rationale=context.policy.rationale,
+            )
 
         return authorized
 
@@ -119,17 +126,13 @@ class ToolGateway:
         context.approved = decision.approved
 
         if self._telemetry:
-            self._telemetry.record_agent_execution(
-                agent_name="ToolGateway.Approval",
-                duration_seconds=0.0,
-                success=decision.approved,
-                tags={
-                    "workflow_id": workflow_id,
-                    "plugin": context.plugin_name,
-                    "tool": context.tool_name,
-                    "approved": str(decision.approved).lower(),
-                    "reviewer": decision.reviewer,
-                },
+            self._telemetry.record_approval_event(
+                workflow_id=workflow_id,
+                plugin_name=context.plugin_name,
+                tool_name=context.tool_name,
+                approved=decision.approved,
+                reviewer=decision.reviewer,
+                request_id=decision.request_id,
             )
 
         return context.approved
@@ -149,24 +152,6 @@ class ToolGateway:
                 ex,
             )
             return None
-
-    def _record_decision(self, workflow_id: str, context: ToolExecutionContext) -> None:
-        if not self._telemetry:
-            return
-
-        tags = {
-            "workflow_id": workflow_id,
-            "plugin": context.plugin_name,
-            "tool": context.tool_name,
-            "risk_level": context.definition.risk_level.value,
-            "decision": context.policy.decision.value,
-            }
-        self._telemetry.record_agent_execution(
-            agent_name="ToolGateway",
-            duration_seconds=0.0,
-            success=context.policy.decision != PolicyDecision.BLOCK,
-            tags=tags,
-        )
 
 
 __all__ = ["ToolGateway", "ToolExecutionContext"]

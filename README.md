@@ -44,6 +44,8 @@ agent-platform/
 
 ## Quick Start
 
+See [CHANGELOG](CHANGELOG.md) for release notes.
+
 ### Prerequisites
 
 - Python 3.11+
@@ -128,7 +130,9 @@ for qualified_name, context in tools.items():
 
 ```python
 from src.plugins.base_plugin import BasePlugin
+from src.plugins.tooling_metadata import tool_spec, ToolInput, RiskLevel
 from semantic_kernel.functions.kernel_function_decorator import kernel_function
+
 
 class MyCustomPlugin(BasePlugin):
     @property
@@ -139,13 +143,22 @@ class MyCustomPlugin(BasePlugin):
     def plugin_description(self) -> str:
         return "My custom plugin for specialized tasks"
 
-    @kernel_function(
-        name="process_data",
-        description="Process data with custom logic"
+    @tool_spec(
+        description="Process records with custom logic",
+        risk_level=RiskLevel.MEDIUM,
+        inputs=[ToolInput(name="data", description="JSON payload to process")],
+        output_description="Success payload with processing summary",
     )
-    async def process_data_async(self, data: str, format: str = "json") -> str:
-        # Your custom processing logic here
-        return self.create_success_response("process_data", {"processed": True})
+    @kernel_function(name="process_data", description="Process data with custom logic")
+    async def process_data_async(self, data: str) -> str:
+        result = {"processed": True, "input_length": len(data)}
+        return self.create_success_response("process_data", result)
+```
+
+### Scaffold a New Plugin
+
+```bash
+python scripts/create_plugin.py AnalyticsPlugin "Enriches analytics data" --risk MEDIUM --approval POLICY --output src/plugins
 ```
 
 ### HITL Workflow Example

@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Callable, Dict, Optional
 
 from src.plugins.tooling_metadata import RiskLevel
+from src.observability.telemetry_service import TelemetryService
 
 
 @dataclass(slots=True)
@@ -51,10 +52,12 @@ class ConsoleApprovalService(ApprovalService):
         *,
         input_fn: Callable[[str], str] | None = None,
         auto_approve: bool = False,
+        telemetry: Optional[TelemetryService] = None,
         logger: Optional[logging.Logger] = None,
     ) -> None:
         self._input_fn = input_fn or input
         self._auto_approve = auto_approve
+        self._telemetry = telemetry
         self._logger = logger or logging.getLogger(self.__class__.__name__)
 
     def request_approval(self, request: ApprovalRequest) -> ApprovalDecision:
@@ -102,12 +105,24 @@ class ConsoleApprovalService(ApprovalService):
             request.workflow_id,
         )
 
-        return ApprovalDecision(
+        decision = ApprovalDecision(
             request_id=request.request_id,
             approved=approved,
             reviewer=reviewer,
             reason=reason,
         )
+
+        if self._telemetry:
+            self._telemetry.record_approval_event(
+                workflow_id=request.workflow_id,
+                plugin_name=request.plugin_name,
+                tool_name=request.tool_name,
+                approved=decision.approved,
+                reviewer=decision.reviewer,
+                request_id=decision.request_id,
+            )
+
+        return decision
 
 
 __all__ = [
