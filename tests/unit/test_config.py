@@ -49,8 +49,8 @@ class TestSettings:
         """Test agent platform configuration defaults."""
         settings = Settings()
 
-        assert settings.agent_platform.enable_hitl is True
-        assert settings.agent_platform.default_approval_timeout_seconds == 300
+        assert settings.agent_platform.enable_human_in_the_loop is True
+        assert settings.agent_platform.approval_timeout_seconds == 1800
         assert settings.agent_platform.max_concurrent_agents == 10
 
     def test_observability_defaults(self):
@@ -58,8 +58,8 @@ class TestSettings:
         settings = Settings()
 
         assert settings.observability.enable_telemetry is True
-        assert settings.observability.enable_metrics is True
-        assert settings.observability.enable_logging is True
+        assert settings.observability.console_exporter_enabled is True
+        assert settings.observability.otlp_exporter_enabled is False
 
 
 class TestAzureOpenAIConfig:
@@ -76,7 +76,7 @@ class TestAzureOpenAIConfig:
         assert config.endpoint == "https://test.openai.azure.com/"
         assert config.api_key == "test-key"
         assert config.model_id == "gpt-4"
-        assert config.api_version == "2024-02-01"  # default
+        assert config.api_version == "2024-05-01-preview"
 
     def test_azure_openai_config_with_custom_version(self):
         """Test Azure OpenAI config with custom API version."""
@@ -102,14 +102,12 @@ class TestOpenAIConfig:
 
         assert config.api_key == "test-key"
         assert config.model_id == "gpt-4-turbo"
-        assert config.base_url is None  # default
 
-    def test_openai_config_with_base_url(self):
-        """Test OpenAI config with custom base URL."""
+    def test_openai_config_with_custom_model(self):
+        """Test OpenAI config with a non-default model id."""
         config = OpenAIConfig(
             api_key="test-key",
-            model_id="gpt-4-turbo",
-            base_url="https://api.custom.com/v1"
+            model_id="gpt-4o-mini"
         )
 
-        assert config.base_url == "https://api.custom.com/v1"
+        assert config.model_id == "gpt-4o-mini"

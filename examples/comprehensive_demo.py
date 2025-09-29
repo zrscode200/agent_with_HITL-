@@ -8,7 +8,7 @@ import logging
 import sys
 import json
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime
 import httpx
@@ -24,8 +24,10 @@ logger = logging.getLogger(__name__)
 # Add the project root to Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.services.semantic_kernel_service import SemanticKernelService
 from src.observability.telemetry_service import TelemetryService
+from src.reasoning.plan_react.process import PlanReactCoordinator
+from src.runtime.runtime_builder import AgentRuntimeBuilder
+from src.runtime.runtime_types import AgentRuntime
 from config import Settings
 
 
@@ -68,7 +70,8 @@ class ComprehensiveDemo:
         """Initialize the demonstration."""
         self.logger = logging.getLogger(self.__class__.__name__)
         self.settings = Settings()
-        self.semantic_kernel_service: Optional[SemanticKernelService] = None
+        self.runtime_builder: Optional[AgentRuntimeBuilder] = None
+        self.runtime: Optional[AgentRuntime] = None
         self.telemetry_service: Optional[TelemetryService] = None
         self.http_client: Optional[httpx.AsyncClient] = None
 
@@ -115,12 +118,27 @@ class ComprehensiveDemo:
         self.logger.info("Starting plugin demonstration example")
 
         try:
-            kernel = self.semantic_kernel_service.kernel
-            plugin_manager = self.semantic_kernel_service.plugin_manager
+            runtime = self._require_runtime()
+            kernel = runtime.kernel
+            plugin_manager = runtime.plugin_manager
+            policy_engine = runtime.policy_engine
             sample_document = self._create_sample_documents()[1]  # Use the contract document
 
             print("=== Plugin Demonstration ===")
             print(f"Processing document: {sample_document.title}\n")
+
+            policy_results = plugin_manager.get_tools_for_workflow(
+                workflow_id=PlanReactCoordinator.WORKFLOW_ID,
+                policy_engine=policy_engine,
+            )
+            print("Policy decisions for Plan→ReAct workflow:")
+            for plugin_name, tools in policy_results.items():
+                for tool_name, evaluation in tools.items():
+                    print(
+                        f"  - {plugin_name}.{tool_name}: {evaluation.decision.value} "
+                        f"({evaluation.rationale})"
+                    )
+            print()
 
             # 1. Document Analysis Plugin
             self.logger.info("Demonstrating DocumentProcessing plugin")
@@ -175,7 +193,8 @@ class ComprehensiveDemo:
         self.logger.info("Starting HTTP plugin demonstration")
 
         try:
-            plugin_manager = self.semantic_kernel_service.plugin_manager
+            runtime = self._require_runtime()
+            plugin_manager = runtime.plugin_manager
 
             print("=== HTTP Plugin Demonstration ===")
 
@@ -223,7 +242,8 @@ class ComprehensiveDemo:
             print(f"Analyzing document: {sample_document.title}\n")
 
             # Get agents from the orchestrator
-            orchestrator = self.semantic_kernel_service.agent_orchestrator
+            runtime = self._require_runtime()
+            orchestrator = runtime.agent_orchestrator
             all_agents = orchestrator.get_all_agents()
 
             if len(all_agents) >= 2:
@@ -290,6 +310,8 @@ class ComprehensiveDemo:
         print("=== Observability and Monitoring ===")
 
         try:
+            runtime = self._require_runtime()
+
             if self.telemetry_service:
                 # Record some sample metrics
                 self.telemetry_service.record_agent_execution("DemoAgent", 1.5, True, {"demo": "true"})
@@ -302,12 +324,12 @@ class ComprehensiveDemo:
                 print("- Approval latency: 30s (approved, medium risk)")
 
             # Show service information
-            service_info = self.semantic_kernel_service.get_service_info()
+            service_info = self._runtime_service_info(runtime)
             print(f"\nService Information:")
             self._print_json_data(service_info)
 
             # Validate plugin status
-            plugin_manager = self.semantic_kernel_service.plugin_manager
+            plugin_manager = runtime.plugin_manager
             validation_result = await plugin_manager.validate_plugins_async()
 
             print(f"\nPlugin Validation:")
@@ -335,15 +357,15 @@ class ComprehensiveDemo:
         self.telemetry_service = TelemetryService(self.settings, self.logger)
         self.telemetry_service.initialize()
 
-        # Initialize semantic kernel service
-        self.semantic_kernel_service = SemanticKernelService(
+        # Initialize agent runtime
+        self.runtime_builder = AgentRuntimeBuilder(
             settings=self.settings,
+            telemetry_service=self.telemetry_service,
             logger=self.logger,
-            telemetry_service=self.telemetry_service
+            http_client=self.http_client,
         )
 
-        await self.semantic_kernel_service.initialize_async(self.http_client)
-        await self.semantic_kernel_service.create_default_agents_async()
+        self.runtime = await self.runtime_builder.build()
 
     async def _cleanup_async(self) -> None:
         """Cleanup resources."""
@@ -352,6 +374,41 @@ class ComprehensiveDemo:
 
         if self.telemetry_service:
             self.telemetry_service.shutdown()
+
+        if self.runtime:
+            self.runtime.dispose()
+            self.runtime = None
+
+    def _require_runtime(self) -> AgentRuntime:
+        if not self.runtime:
+            raise RuntimeError("Agent runtime has not been initialized yet.")
+        return self.runtime
+
+    def _runtime_service_info(self, runtime: AgentRuntime) -> Dict[str, Any]:
+        services = getattr(runtime.kernel, "services", {}) or {}
+        ai_summary: Optional[Dict[str, Any]] = None
+
+        if services:
+            service_id, service = next(iter(services.items()))
+            ai_summary = {
+                "service_id": service_id,
+                "type": type(service).__name__,
+            }
+
+            model_name = getattr(service, "deployment_name", None) or getattr(service, "ai_model_id", None)
+            if model_name:
+                ai_summary["model"] = model_name
+
+            endpoint = getattr(service, "endpoint", None)
+            if endpoint:
+                ai_summary["endpoint"] = endpoint
+
+        return {
+            "initialized": True,
+            "ai_service": ai_summary,
+            "agents_count": len(runtime.agent_orchestrator.get_all_agents()),
+            "plugins_count": len(runtime.plugin_manager.get_registered_plugins()),
+        }
 
     async def _process_single_document_async(self, document: SampleDocument) -> None:
         """Process a single document through the HITL workflow."""

@@ -12,13 +12,13 @@ This Python implementation provides full feature parity with the C# version, inc
 - Comprehensive testing and documentation
 
 Usage:
-    from src.services.semantic_kernel_service import SemanticKernelService
-    from src.config import Settings
+    from config import Settings
+    from src.runtime.runtime_builder import AgentRuntimeBuilder
 
     settings = Settings()
-    async with SemanticKernelService(settings) as service:
+    async with AgentRuntimeBuilder(settings=settings) as runtime:
         # Your agent platform code here
-        pass
+        plan = await runtime.plan_react.run("Investigate platform readiness")
 """
 
 __version__ = "1.0.0"
@@ -27,17 +27,19 @@ __email__ = "support@agentplatform.com"
 
 # Key exports - Note: config is at root level now
 # from .config import Settings  # Config is now at project root
-from .services.semantic_kernel_service import SemanticKernelService
 from .agents.agent_factory import AgentFactory
 from .agents.agent_orchestrator import AgentOrchestrator
 from .plugins.plugin_manager import PluginManager
 from .observability.telemetry_service import TelemetryService
+from .runtime.runtime_builder import AgentRuntimeBuilder
+from .runtime.runtime_types import AgentRuntime
 
 __all__ = [
     # "Settings",  # Config is at root level
-    "SemanticKernelService",
     "AgentFactory",
     "AgentOrchestrator",
     "PluginManager",
-    "TelemetryService"
+    "TelemetryService",
+    "AgentRuntimeBuilder",
+    "AgentRuntime",
 ]

@@ -6,9 +6,11 @@ from typing import Dict, Any, List, Optional, Type
 from datetime import datetime
 from dataclasses import dataclass
 from semantic_kernel import Kernel
-from semantic_kernel.functions.kernel_function_decorator import kernel_function
 
 from .base_plugin import BasePlugin
+from .tooling_metadata import PluginMetadata, ToolDefinition
+from src.policies.policy_engine import PolicyEngine
+from src.policies.policy_models import PolicyDecision, PolicyEvaluation
 
 
 @dataclass
@@ -18,6 +20,7 @@ class PluginInfo:
     description: str
     function_count: int
     functions: List[str]
+    metadata: PluginMetadata
 
 
 @dataclass
@@ -60,9 +63,10 @@ class PluginManager:
             # Store reference for management
             self._registered_plugins[name] = plugin_instance
 
-            function_count = self._get_plugin_function_count(plugin_instance)
+            manifest = plugin_instance.get_plugin_metadata()
+            function_count = len(manifest.tools)
             self._logger.info(
-                f"Successfully registered plugin: {name} with {function_count} functions"
+                "Successfully registered plugin: %s with %d function(s)", name, function_count
             )
 
         except Exception as ex:
@@ -97,11 +101,13 @@ class PluginManager:
         plugin_info = {}
 
         for name, plugin in self._registered_plugins.items():
+            metadata = plugin.get_plugin_metadata()
             plugin_info[name] = PluginInfo(
-                name=plugin.plugin_name,
-                description=plugin.plugin_description,
-                function_count=self._get_plugin_function_count(plugin),
-                functions=self._get_plugin_functions(plugin)
+                name=metadata.name,
+                description=metadata.description,
+                function_count=len(metadata.tools),
+                functions=list(metadata.tools.keys()),
+                metadata=metadata,
             )
 
         return plugin_info
@@ -143,8 +149,8 @@ class PluginManager:
 
         for name, plugin in self._registered_plugins.items():
             try:
-                # Basic validation - check if plugin has functions
-                function_count = self._get_plugin_function_count(plugin)
+                manifest = plugin.get_plugin_metadata()
+                function_count = len(manifest.tools)
                 if function_count > 0:
                     result.successful_plugins.append(name)
                     self._logger.debug(
@@ -185,35 +191,20 @@ class PluginManager:
             self._logger.error("Failed to register built-in plugins", exc_info=ex)
             raise
 
-    def _get_plugin_function_count(self, plugin: BasePlugin) -> int:
-        """Get the number of functions in a plugin."""
-        count = 0
-        for method_name in dir(plugin):
-            method = getattr(plugin, method_name)
-            if hasattr(method, '__kernel_function__') or self._has_kernel_function_decorator(method):
-                count += 1
-        return count
+    def get_tool_manifest(self) -> Dict[str, Dict[str, ToolDefinition]]:
+        """Return a manifest of plugin -> tool definitions for governance layers."""
+        manifest: Dict[str, Dict[str, ToolDefinition]] = {}
+        for name, plugin in self._registered_plugins.items():
+            metadata = plugin.get_plugin_metadata()
+            manifest[name] = metadata.tools
+        return manifest
 
-    def _get_plugin_functions(self, plugin: BasePlugin) -> List[str]:
-        """Get the list of function names in a plugin."""
-        functions = []
-        for method_name in dir(plugin):
-            method = getattr(plugin, method_name)
-            if hasattr(method, '__kernel_function__') or self._has_kernel_function_decorator(method):
-                # Try to get the function name from decorator metadata
-                if hasattr(method, '__kernel_function_name__'):
-                    functions.append(method.__kernel_function_name__)
-                else:
-                    functions.append(method_name)
-        return functions
-
-    def _has_kernel_function_decorator(self, method) -> bool:
-        """Check if a method has the kernel_function decorator."""
-        # Check for various ways the decorator might be applied
-        return (
-            hasattr(method, '__kernel_function__') or
-            hasattr(method, '__kernel_function_name__') or
-            hasattr(method, '__kernel_function_description__') or
-            (hasattr(method, '__annotations__') and
-             any('kernel_function' in str(annotation) for annotation in getattr(method, '__annotations__', {}).values()))
-        )
+    def get_tools_for_workflow(
+        self,
+        *,
+        workflow_id: str,
+        policy_engine: PolicyEngine,
+    ) -> Dict[str, Dict[str, PolicyEvaluation]]:
+        """Evaluate all tools for a workflow and return policy decisions."""
+        manifest = self.get_tool_manifest()
+        return policy_engine.evaluate_manifest(workflow_id=workflow_id, manifest=manifest)

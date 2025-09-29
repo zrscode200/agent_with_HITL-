@@ -4,7 +4,15 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Optional, Dict
+from typing import Any, Dict, Optional
+
+from .tooling_metadata import (
+    ApprovalRequirement,
+    PluginMetadata,
+    RiskLevel,
+    ToolDefinition,
+    TOOL_METADATA_ATTR,
+)
 
 
 class BasePlugin(ABC):
@@ -25,6 +33,26 @@ class BasePlugin(ABC):
     def plugin_description(self) -> str:
         """Get the plugin description."""
         pass
+
+    @property
+    def plugin_version(self) -> str:
+        """Semantic version for the plugin; override when distributing."""
+        return "1.0.0"
+
+    @property
+    def plugin_owner(self) -> Optional[str]:
+        """Optional owner or team name for observability/approvals."""
+        return None
+
+    @property
+    def plugin_category(self) -> Optional[str]:
+        """Logical category that can help filter tools."""
+        return None
+
+    @property
+    def default_risk_level(self) -> RiskLevel:
+        """Default risk applied when a tool lacks explicit metadata."""
+        return RiskLevel.LOW
 
     def validate_required_parameter(self, parameter_name: str, value: Any) -> None:
         """Validate input parameters for a function call."""
@@ -85,3 +113,65 @@ class BasePlugin(ABC):
             "timestamp": datetime.utcnow().isoformat()
         }
         return json.dumps(success_response, indent=2, default=str)
+
+    # --- Governance metadata -------------------------------------------------
+
+    def get_plugin_metadata(self) -> PluginMetadata:
+        """Build governance metadata for the plugin and its toolset."""
+        tools = self._collect_tool_definitions()
+        return PluginMetadata(
+            name=self.plugin_name,
+            description=self.plugin_description,
+            version=self.plugin_version,
+            owner=self.plugin_owner,
+            category=self.plugin_category,
+            default_risk=self.default_risk_level,
+            tools=tools,
+        )
+
+    # Internal helpers --------------------------------------------------------
+
+    def _collect_tool_definitions(self) -> Dict[str, ToolDefinition]:
+        """Inspect kernel functions and assemble tool metadata."""
+        definitions: Dict[str, ToolDefinition] = {}
+
+        for attr in dir(self):
+            method = getattr(self, attr)
+            if not callable(method):
+                continue
+
+            if not self._has_kernel_function_decorator(method):
+                continue
+
+            name = getattr(method, "__kernel_function_name__", attr)
+            description = (
+                getattr(method, "__kernel_function_description__", None)
+                or getattr(method, "__doc__", "")
+                or ""
+            ).strip()
+
+            metadata: Optional[ToolDefinition] = getattr(method, TOOL_METADATA_ATTR, None)
+            if metadata is not None:
+                metadata = metadata.with_updates(
+                    name=name,
+                    description=description or metadata.description,
+                )
+            else:
+                metadata = ToolDefinition(
+                    name=name,
+                    description=description,
+                    risk_level=self.default_risk_level,
+                    approval=ApprovalRequirement.NONE,
+                )
+
+            definitions[name] = metadata
+
+        return definitions
+
+    def _has_kernel_function_decorator(self, method: Any) -> bool:
+        """Check if a method has the semantic kernel function decorator."""
+        return (
+            hasattr(method, "__kernel_function__")
+            or hasattr(method, "__kernel_function_name__")
+            or hasattr(method, "__kernel_function_description__")
+        )

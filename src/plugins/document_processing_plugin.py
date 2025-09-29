@@ -9,6 +9,12 @@ from dataclasses import dataclass
 from semantic_kernel.functions.kernel_function_decorator import kernel_function
 
 from .base_plugin import BasePlugin
+from .tooling_metadata import (
+    ApprovalRequirement,
+    RiskLevel,
+    ToolInput,
+    tool_spec,
+)
 
 
 @dataclass
@@ -67,6 +73,21 @@ class DocumentProcessingPlugin(BasePlugin):
     def plugin_description(self) -> str:
         return "Plugin for document processing, analysis, and validation operations"
 
+    @tool_spec(
+        description="Analyze structured and unstructured documents to surface insights",
+        risk_level=RiskLevel.MEDIUM,
+        approval=ApprovalRequirement.NONE,
+        inputs=[
+            ToolInput(name="document_content", description="Full document text to analyze"),
+            ToolInput(
+                name="document_type",
+                description="Optional hint about document type (e.g., contract, policy)",
+                required=False,
+            ),
+        ],
+        output_description="JSON payload summarizing key metrics, topics, and language stats",
+        tags={"category": "document-analysis"},
+    )
     @kernel_function(
         name="analyze_document",
         description="Analyzes document content to extract key information, metadata, and structure"
@@ -103,6 +124,26 @@ class DocumentProcessingPlugin(BasePlugin):
             self.log_function_error(function_name, ex)
             return self.create_error_response(function_name, "Failed to analyze document", ex)
 
+    @tool_spec(
+        description="Validate a document against defined rules and risk thresholds",
+        risk_level=RiskLevel.HIGH,
+        approval=ApprovalRequirement.POLICY,
+        inputs=[
+            ToolInput(name="document_content", description="Full document text to validate"),
+            ToolInput(
+                name="validation_rules",
+                description="JSON string describing validation rules",
+                required=False,
+            ),
+            ToolInput(
+                name="validation_level",
+                description="Validation strictness (e.g., standard, strict)",
+                required=False,
+            ),
+        ],
+        output_description="JSON payload detailing validation status, issues, and warnings",
+        tags={"category": "document-validation"},
+    )
     @kernel_function(
         name="validate_document",
         description="Validates document content against specified criteria and business rules"
@@ -141,6 +182,22 @@ class DocumentProcessingPlugin(BasePlugin):
             self.log_function_error(function_name, ex)
             return self.create_error_response(function_name, "Failed to validate document", ex)
 
+    @tool_spec(
+        description="Extract targeted entities (dates, parties, etc.) from a document",
+        risk_level=RiskLevel.MEDIUM,
+        approval=ApprovalRequirement.NONE,
+        inputs=[
+            ToolInput(name="document_content", description="Full document text"),
+            ToolInput(name="information_type", description="Type of information to extract"),
+            ToolInput(
+                name="custom_pattern",
+                description="Optional custom regex or pattern",
+                required=False,
+            ),
+        ],
+        output_description="JSON payload listing extracted items with metadata",
+        tags={"category": "document-extraction"},
+    )
     @kernel_function(
         name="extract_information",
         description="Extracts specific information from document content using patterns, keywords, or regex"
@@ -180,6 +237,22 @@ class DocumentProcessingPlugin(BasePlugin):
             self.log_function_error(function_name, ex)
             return self.create_error_response(function_name, "Failed to extract information", ex)
 
+    @tool_spec(
+        description="Transform a document into another format such as summary or outline",
+        risk_level=RiskLevel.MEDIUM,
+        approval=ApprovalRequirement.NONE,
+        inputs=[
+            ToolInput(name="document_content", description="Full document text to transform"),
+            ToolInput(name="target_format", description="Output format (summary, outline, etc.)"),
+            ToolInput(
+                name="options",
+                description="JSON string with transformation options",
+                required=False,
+            ),
+        ],
+        output_description="JSON payload containing the transformed content",
+        tags={"category": "document-transformation"},
+    )
     @kernel_function(
         name="transform_document",
         description="Transforms document content to different formats (summary, outline, structured_data, etc.)"

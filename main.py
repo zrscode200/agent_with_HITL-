@@ -13,8 +13,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
 from examples.comprehensive_demo import ComprehensiveDemo
-from src.services.semantic_kernel_service import SemanticKernelService
 from src.observability.telemetry_service import TelemetryService
+from src.runtime.runtime_builder import AgentRuntimeBuilder
+from src.runtime.runtime_types import AgentRuntime
 from config import Settings
 
 
@@ -47,28 +48,23 @@ async def run_interactive() -> None:
 
     settings = Settings()
 
-    # Validate configuration
     if not settings.azure_openai and not settings.openai:
-        print("❌ Error: No AI service configured.")
-        print("Please set either Azure OpenAI or OpenAI credentials in your .env file.")
-        print("See .env.example for required environment variables.")
-        return
+        print("⚠️  Warning: No AI service configured. Heuristic planning will be used.")
 
     telemetry_service = TelemetryService(settings)
     telemetry_service.initialize()
 
-    async with SemanticKernelService(settings, telemetry_service=telemetry_service) as sk_service:
-        await sk_service.create_default_agents_async()
+    async with AgentRuntimeBuilder(settings=settings, telemetry_service=telemetry_service) as runtime:
 
         print("✅ Agent platform initialized successfully!")
         print()
         print("Available agents:")
-        for agent in sk_service.agent_orchestrator.get_all_agents():
+        for agent in runtime.agent_orchestrator.get_all_agents():
             print(f"  - {agent.name}")
 
         print()
         print("Available plugins:")
-        plugins = sk_service.plugin_manager.get_registered_plugins()
+        plugins = runtime.plugin_manager.get_registered_plugins()
         for plugin_name, plugin_info in plugins.items():
             print(f"  - {plugin_name}: {plugin_info.description}")
 
@@ -87,10 +83,10 @@ async def run_interactive() -> None:
 
                 # Simple command processing
                 if user_input.startswith('/'):
-                    await process_command(user_input, sk_service)
+                    await process_command(user_input, runtime)
                 else:
                     # Process as agent message
-                    agents = sk_service.agent_orchestrator.get_all_agents()
+                    agents = runtime.agent_orchestrator.get_all_agents()
                     if agents:
                         agent = agents[0]  # Use first available agent
                         # This would be implemented based on SK's Python API
@@ -106,8 +102,10 @@ async def run_interactive() -> None:
 
         print("\n👋 Goodbye!")
 
+    telemetry_service.shutdown()
 
-async def process_command(command: str, sk_service: SemanticKernelService) -> None:
+
+async def process_command(command: str, runtime: AgentRuntime) -> None:
     """Process slash commands."""
     cmd = command[1:].lower()
 
@@ -120,7 +118,7 @@ async def process_command(command: str, sk_service: SemanticKernelService) -> No
         print("  /validate - Validate configuration")
 
     elif cmd == 'status':
-        info = sk_service.get_service_info()
+        info = _runtime_service_info(runtime)
         print("Platform Status:")
         print(f"  Initialized: {info['initialized']}")
         print(f"  AI Service: {info['ai_service']['type'] if info['ai_service'] else 'None'}")
@@ -128,13 +126,13 @@ async def process_command(command: str, sk_service: SemanticKernelService) -> No
         print(f"  Plugins: {info['plugins_count']}")
 
     elif cmd == 'agents':
-        agents = sk_service.agent_orchestrator.get_all_agents()
+        agents = runtime.agent_orchestrator.get_all_agents()
         print("Available Agents:")
         for agent in agents:
             print(f"  - {agent.name}: {getattr(agent, 'description', 'No description')}")
 
     elif cmd == 'plugins':
-        plugins = sk_service.plugin_manager.get_registered_plugins()
+        plugins = runtime.plugin_manager.get_registered_plugins()
         print("Available Plugins:")
         for plugin_name, plugin_info in plugins.items():
             print(f"  - {plugin_name}: {plugin_info.description}")
@@ -142,11 +140,41 @@ async def process_command(command: str, sk_service: SemanticKernelService) -> No
 
     elif cmd == 'validate':
         print("Validating configuration...")
-        is_valid = await sk_service.validate_configuration_async()
-        print(f"✅ Configuration valid: {is_valid}")
+        validation = await runtime.plugin_manager.validate_plugins_async()
+        print(f"✅ Plugins valid: {validation.is_valid}")
+        if validation.failed_plugins:
+            for name, error in validation.failed_plugins.items():
+                print(f"  - {name}: {error}")
 
     else:
         print(f"❌ Unknown command: {command}")
+
+
+def _runtime_service_info(runtime: AgentRuntime) -> dict:
+    services = getattr(runtime.kernel, "services", {}) or {}
+    ai_summary = None
+
+    if services:
+        service_id, service = next(iter(services.items()))
+        ai_summary = {
+            "service_id": service_id,
+            "type": type(service).__name__,
+        }
+
+        model_name = getattr(service, "deployment_name", None) or getattr(service, "ai_model_id", None)
+        if model_name:
+            ai_summary["model"] = model_name
+
+        endpoint = getattr(service, "endpoint", None)
+        if endpoint:
+            ai_summary["endpoint"] = endpoint
+
+    return {
+        "initialized": True,
+        "ai_service": ai_summary,
+        "agents_count": len(runtime.agent_orchestrator.get_all_agents()),
+        "plugins_count": len(runtime.plugin_manager.get_registered_plugins()),
+    }
 
 
 def main():

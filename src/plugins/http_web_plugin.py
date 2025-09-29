@@ -10,6 +10,12 @@ import httpx
 from semantic_kernel.functions.kernel_function_decorator import kernel_function
 
 from .base_plugin import BasePlugin
+from .tooling_metadata import (
+    ApprovalRequirement,
+    RiskLevel,
+    ToolInput,
+    tool_spec,
+)
 
 
 @dataclass
@@ -66,6 +72,27 @@ class HttpWebPlugin(BasePlugin):
     def plugin_description(self) -> str:
         return "Plugin for HTTP web operations, API calls, and data retrieval"
 
+    @tool_spec(
+        description="Perform an HTTP GET request with optional headers and timeout",
+        risk_level=RiskLevel.MEDIUM,
+        approval=ApprovalRequirement.NONE,
+        inputs=[
+            ToolInput(name="url", description="Target URL to execute"),
+            ToolInput(
+                name="headers",
+                description="Optional JSON string of HTTP headers",
+                required=False,
+            ),
+            ToolInput(
+                name="timeout_seconds",
+                description="Request timeout in seconds",
+                type="integer",
+                required=False,
+            ),
+        ],
+        output_description="JSON payload describing status, headers, and body snippet",
+        tags={"category": "http", "method": "GET"},
+    )
     @kernel_function(
         name="http_get",
         description="Makes an HTTP GET request to retrieve data from a specified URL"
@@ -136,6 +163,28 @@ class HttpWebPlugin(BasePlugin):
             self.log_function_error(function_name, ex)
             return self.create_error_response(function_name, "Failed to execute HTTP GET request", ex)
 
+    @tool_spec(
+        description="Execute an HTTP POST with JSON payload and capture response metadata",
+        risk_level=RiskLevel.MEDIUM,
+        approval=ApprovalRequirement.NONE,
+        inputs=[
+            ToolInput(name="url", description="Target URL to post to"),
+            ToolInput(name="json_data", description="JSON body string to send"),
+            ToolInput(
+                name="headers",
+                description="Optional JSON string containing additional headers",
+                required=False,
+            ),
+            ToolInput(
+                name="timeout_seconds",
+                description="Request timeout in seconds",
+                type="integer",
+                required=False,
+            ),
+        ],
+        output_description="JSON payload with status code, response headers, and body",
+        tags={"category": "http", "method": "POST"},
+    )
     @kernel_function(
         name="http_post",
         description="Makes an HTTP POST request with JSON data to a specified URL"
@@ -217,6 +266,27 @@ class HttpWebPlugin(BasePlugin):
             self.log_function_error(function_name, ex)
             return self.create_error_response(function_name, "Failed to execute HTTP POST request", ex)
 
+    @tool_spec(
+        description="Fetch JSON data from an API with optional bearer auth",
+        risk_level=RiskLevel.MEDIUM,
+        approval=ApprovalRequirement.NONE,
+        inputs=[
+            ToolInput(name="api_url", description="API endpoint returning JSON"),
+            ToolInput(
+                name="auth_token",
+                description="Optional bearer token for authentication",
+                required=False,
+            ),
+            ToolInput(
+                name="timeout_seconds",
+                description="Request timeout in seconds",
+                type="integer",
+                required=False,
+            ),
+        ],
+        output_description="JSON payload with API response data and metadata",
+        tags={"category": "http", "method": "GET", "format": "json"},
+    )
     @kernel_function(
         name="fetch_json_data",
         description="Retrieves and parses JSON data from a web API endpoint"
@@ -300,6 +370,22 @@ class HttpWebPlugin(BasePlugin):
             self.log_function_error(function_name, ex)
             return self.create_error_response(function_name, "Failed to fetch and parse JSON data", ex)
 
+    @tool_spec(
+        description="Check if a URL is accessible and capture latency and headers",
+        risk_level=RiskLevel.LOW,
+        approval=ApprovalRequirement.NONE,
+        inputs=[
+            ToolInput(name="url", description="URL to validate"),
+            ToolInput(
+                name="timeout_seconds",
+                description="Request timeout in seconds",
+                type="integer",
+                required=False,
+            ),
+        ],
+        output_description="JSON payload reporting status code, latency, and redirects",
+        tags={"category": "http", "action": "health-check"},
+    )
     @kernel_function(
         name="check_url_status",
         description="Checks if a URL is accessible and returns status information"

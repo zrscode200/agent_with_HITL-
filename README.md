@@ -90,23 +90,21 @@ python main.py --mode demo --log-level DEBUG
 
 ```python
 import asyncio
-from src.services.semantic_kernel_service import SemanticKernelService
 from config import Settings
+from src.runtime.runtime_builder import AgentRuntimeBuilder
 
 async def main():
     settings = Settings()
 
-    async with SemanticKernelService(settings) as service:
-        await service.create_default_agents_async()
+    async with AgentRuntimeBuilder(settings=settings) as runtime:
+        # Run the deterministic Plan→ReAct pipeline
+        result = await runtime.plan_react.run("Assess document readiness for release", step_budget=3)
+        print(result.final_response)
 
-        # Get an agent
-        orchestrator = service.agent_orchestrator
-        agent = orchestrator.get_agent("DocumentAnalyst")
-
-        # Use the agent
-        if agent:
-            async for response in agent.invoke("Analyze this document..."):
-                print(response)
+        # Work with registered agents
+        analyst = runtime.agent_orchestrator.get_agent("DocumentAnalyst")
+        if analyst:
+            print(f"Loaded agent: {analyst.name}")
 
 asyncio.run(main())
 ```
