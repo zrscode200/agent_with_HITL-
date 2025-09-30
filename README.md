@@ -303,7 +303,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Support
 
 - **Documentation**: See the `/docs` directory for detailed documentation
-- **Examples**: Check the `/examples` directory for comprehensive examples
+- **Examples**: Check the `/examples` directory for comprehensive examples, including:
+  - `comprehensive_demo.py` (general platform walkthrough)
+  - `sim-real-world/network-rca` (Wi-Fi root cause analysis scenario)
 - **Issues**: Report bugs and request features via GitHub Issues
 - **Discussions**: Join the community discussion for questions and ideas
 

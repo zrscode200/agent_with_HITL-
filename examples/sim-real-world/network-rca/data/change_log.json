@@ -1,0 +1,16 @@
+[
+  {
+    "change_id": "chg-789",
+    "timestamp": "2025-09-29T22:00:00Z",
+    "component": "CTRL-WIFI-1",
+    "description": "Applied firmware patch 8.6.1",
+    "rollback_available": true
+  },
+  {
+    "change_id": "chg-790",
+    "timestamp": "2025-09-30T07:45:00Z",
+    "component": "SW-CORE-2",
+    "description": "Updated QoS policy for wireless VLAN",
+    "rollback_available": false
+  }
+]

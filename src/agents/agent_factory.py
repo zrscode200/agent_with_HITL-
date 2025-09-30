@@ -45,7 +45,6 @@ class AgentFactory:
             )
 
         agent = ChatCompletionAgent(
-            service_id="default",
             kernel=self._kernel,
             name=name,
             instructions=instructions,

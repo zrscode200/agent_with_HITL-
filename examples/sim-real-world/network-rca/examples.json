@@ -1,0 +1,12 @@
+{
+  "examples": {
+    "plan-react": [
+      {
+        "title": "Prior Firmware Issue",
+        "task": "Investigate intermittent Wi-Fi connectivity",
+        "reasoning": "Cross-check alerts, inspect controller logs, verify last firmware change",
+        "output": "Plan to review controller logs, validate firmware rollback, and test AP health"
+      }
+    ]
+  }
+}

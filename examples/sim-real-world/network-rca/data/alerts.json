@@ -1,0 +1,18 @@
+[
+  {
+    "id": "alert-001",
+    "timestamp": "2025-09-30T08:15:00Z",
+    "severity": "critical",
+    "message": "SSID CorpWiFi experiencing authentication failures on Floor3",
+    "affected_components": ["AP-F3-01", "AP-F3-02", "AP-F3-03"],
+    "remediation_hint": "Investigate RADIUS reachability"
+  },
+  {
+    "id": "alert-002",
+    "timestamp": "2025-09-30T08:20:00Z",
+    "severity": "warning",
+    "message": "High packet loss detected on controller CTRL-WIFI-1 uplink",
+    "affected_components": ["CTRL-WIFI-1"],
+    "remediation_hint": "Check switch SW-CORE-2 port utilization"
+  }
+]

@@ -1,0 +1,6 @@
+{
+  "AP-F3-01": {"packet_loss": 12.5, "snr": 18, "client_count": 45},
+  "AP-F3-02": {"packet_loss": 9.7, "snr": 16, "client_count": 52},
+  "AP-F3-03": {"packet_loss": 3.1, "snr": 25, "client_count": 30},
+  "SSID-CorpWiFi": {"auth_failures": 65, "avg_latency_ms": 210}
+}

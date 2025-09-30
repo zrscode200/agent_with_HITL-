@@ -1,0 +1,10 @@
+{
+  "controllers": [
+    {"id": "CTRL-WIFI-1", "location": "HQ-DataCenter", "connected_switch": "SW-CORE-2"}
+  ],
+  "access_points": [
+    {"id": "AP-F3-01", "location": "HQ-Floor3", "controller": "CTRL-WIFI-1"},
+    {"id": "AP-F3-02", "location": "HQ-Floor3", "controller": "CTRL-WIFI-1"},
+    {"id": "AP-F3-03", "location": "HQ-Floor3", "controller": "CTRL-WIFI-1"}
+  ]
+}

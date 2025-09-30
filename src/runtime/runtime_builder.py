@@ -17,6 +17,7 @@ from src.filters.telemetry_filter import TelemetryFilter
 from src.observability.telemetry_service import TelemetryService
 from src.plugins.plugin_manager import PluginManager
 from src.plugins.tooling_metadata import RiskLevel
+from src.policies.approval_service import ConsoleApprovalService
 from src.policies.policy_engine import PolicyEngine
 from src.policies.policy_models import WorkflowPolicy
 from src.reasoning.plan_react.process import PlanReactCoordinator, PlanReactConfiguration
@@ -103,7 +104,6 @@ class AgentRuntimeBuilder:
             telemetry_service=self._telemetry_service,
         )
 
-        await self._create_default_agents(runtime)
         self._runtime = runtime
         return runtime
 

@@ -185,6 +185,15 @@ class PluginManager:
             http_plugin = HttpWebPlugin(http_client, self._logger)
             self.register_plugin(http_plugin)
 
+            # Register WifiDiagnosticsPlugin if data directory exists
+            try:
+                from .wifi_diagnostics_plugin import WifiDiagnosticsPlugin
+
+                wifi_plugin = WifiDiagnosticsPlugin(self._logger)
+                self.register_plugin(wifi_plugin)
+            except (ImportError, FileNotFoundError):
+                self._logger.debug("WifiDiagnosticsPlugin not available; skipping")
+
             self._logger.info("Built-in plugins registered successfully")
 
         except Exception as ex:

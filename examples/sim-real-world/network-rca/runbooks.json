@@ -1,0 +1,25 @@
+{
+  "runbooks": [
+    {
+      "id": "wifi-rca",
+      "description": "Wi-Fi outage root cause analysis steps",
+      "sections": [
+        {
+          "title": "Initial Assessment",
+          "content": "1. Confirm scope (which floors/SSIDs).\n2. Identify alert IDs.\n3. Notify on-call if customer impact is critical.",
+          "priority": 30
+        },
+        {
+          "title": "Data Collection",
+          "content": "- Gather AP metrics: packet loss, SNR, client counts.\n- Review controller logs for authentication failures.\n- Correlate with change log entries in last 24h.",
+          "priority": 20
+        },
+        {
+          "title": "Escalation Guidance",
+          "content": "Escalate if root cause not identified within 30 minutes or if multiple floors impacted.",
+          "priority": 10
+        }
+      ]
+    }
+  ]
+}
