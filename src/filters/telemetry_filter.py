@@ -3,8 +3,10 @@
 import time
 import logging
 from typing import Optional, Dict, Any, Callable, Awaitable
-from semantic_kernel.functions import KernelFunction
-from semantic_kernel.kernel import KernelArguments
+
+from semantic_kernel.filters.functions.function_invocation_context import (
+    FunctionInvocationContext,
+)
 
 from src.observability.telemetry_service import TelemetryService
 
@@ -23,11 +25,12 @@ class TelemetryFilter:
 
     async def on_function_invocation_async(
         self,
-        function: KernelFunction,
-        arguments: KernelArguments,
-        next_filter: Callable[[KernelFunction, KernelArguments], Awaitable[Any]]
-    ) -> Any:
+        context: FunctionInvocationContext,
+        next: Callable[[FunctionInvocationContext], Awaitable[None]],
+    ) -> None:
         """Filter function invocations to collect telemetry."""
+        function = context.function
+        arguments = context.arguments
         function_name = function.name
         plugin_name = function.plugin_name or "Unknown"
         start_time = time.perf_counter()
@@ -57,7 +60,8 @@ class TelemetryFilter:
                         )
 
                 # Execute the function
-                result = await next_filter(function, arguments)
+                await next(context)
+                result = context.result
 
                 # Record success
                 if span:
@@ -71,8 +75,7 @@ class TelemetryFilter:
                 # Extract token usage if available in the result
                 if result is not None:
                     self._extract_and_record_token_usage(result, plugin_name, function_name)
-
-                return result
+                return
 
             except Exception as ex:
                 success = False

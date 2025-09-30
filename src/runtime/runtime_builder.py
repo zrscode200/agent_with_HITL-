@@ -148,11 +148,17 @@ class AgentRuntimeBuilder:
     def _register_filters(self) -> None:
         """Register security and telemetry filters with the kernel."""
         security_filter = SecurityFilter(self._logger)
-        self._kernel.add_filter("function_invocation", security_filter)
+        self._kernel.add_filter(
+            "function_invocation",
+            security_filter.on_function_invocation_async,
+        )
 
         if self._telemetry_service:
             telemetry_filter = TelemetryFilter(self._telemetry_service, self._logger)
-            self._kernel.add_filter("function_invocation", telemetry_filter)
+            self._kernel.add_filter(
+                "function_invocation",
+                telemetry_filter.on_function_invocation_async,
+            )
 
     def _build_policy_engine(self, plugin_manager: PluginManager) -> PolicyEngine:
         """Create the policy engine with default workflow policies."""

@@ -4,6 +4,10 @@ import logging
 import re
 import urllib.parse
 from typing import List, Set, Optional, Any, Dict, Callable, Awaitable
+
+from semantic_kernel.filters.functions.function_invocation_context import (
+    FunctionInvocationContext,
+)
 from semantic_kernel.functions import KernelFunction
 from semantic_kernel.kernel import KernelArguments
 
@@ -23,7 +27,7 @@ class SecurityFilter:
     MALICIOUS_PATTERNS = [
         re.compile(r'<script[^>]*>.*?</script>', re.IGNORECASE | re.DOTALL),
         re.compile(r'javascript:', re.IGNORECASE),
-        re.compile(r'on\w+\s*=', re.IGNORECASE),
+        re.compile(r'\bon\w+\s*=', re.IGNORECASE),
         re.compile(r'(union\s+select|drop\s+table|delete\s+from|insert\s+into)', re.IGNORECASE),
         re.compile(r'(\.\./|\.\.\|\.\.%2f)', re.IGNORECASE),
         re.compile(r'(eval\s*\(|exec\s*\(|system\s*\()', re.IGNORECASE)
@@ -56,11 +60,12 @@ class SecurityFilter:
 
     async def on_function_invocation_async(
         self,
-        function: KernelFunction,
-        arguments: KernelArguments,
-        next_filter: Callable[[KernelFunction, KernelArguments], Awaitable[Any]]
-    ) -> Any:
+        context: FunctionInvocationContext,
+        next: Callable[[FunctionInvocationContext], Awaitable[None]],
+    ) -> None:
         """Filter function invocations for security validation."""
+        function = context.function
+        arguments = context.arguments
         function_name = function.name
         plugin_name = function.plugin_name or "Unknown"
 
@@ -79,12 +84,13 @@ class SecurityFilter:
             self._logger.debug(f"Security filter: Validation passed for {plugin_name}.{function_name}")
 
             # Execute the function
-            result = await next_filter(function, arguments)
+            await next(context)
+            result = context.result.value if context.result else None
 
             # 4. Post-execution validation if needed
             await self._validate_result_async(result, plugin_name, function_name)
 
-            return result
+            return
 
         except SecurityException:
             self._logger.warning(
