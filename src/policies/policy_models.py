@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from src.plugins.tooling_metadata import RiskLevel, ToolDefinition
 
@@ -15,6 +15,16 @@ class PolicyDecision(str, Enum):
     ALLOW = "allow"
     REQUIRE_HUMAN_APPROVAL = "require_human_approval"
     BLOCK = "block"
+
+
+class ApprovalType(str, Enum):
+    """Types of approval requests for different phases."""
+
+    TOOL_EXECUTION = "tool_execution"  # Runtime tool approval
+    STRATEGIC_REVIEW = "strategic_review"  # High-level plan review
+    TACTICAL_FEASIBILITY = "tactical_feasibility"  # Tool mapping gaps
+    PLUGIN_INSTALLATION = "plugin_installation"  # Plugin suggestions
+    RUNTIME_DATA = "runtime_data"  # Data requests during execution
 
 
 @dataclass(slots=True)
@@ -63,6 +73,7 @@ def compare_risk(level: RiskLevel, threshold: RiskLevel) -> int:
 
 __all__ = [
     "PolicyDecision",
+    "ApprovalType",
     "WorkflowPolicy",
     "PolicyEvaluation",
     "compare_risk",

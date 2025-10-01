@@ -1,0 +1,26 @@
+{
+  "incident": {
+    "id": "INC-2178",
+    "service": "Remote Access VPN",
+    "priority": "P1",
+    "reported_by": "Service Desk",
+    "summary": "Multiple users report VPN disconnects starting 08:15 UTC; remote engineers unable to access production tooling.",
+    "impact": "Remote workforce across NA region"
+  },
+  "timeline": [
+    "08:12 \u2013 Monitoring alert: VPN gateway latency spike",
+    "08:15 \u2013 First ticket opened by user",
+    "08:19 \u2013 Burst of authentication failures noted",
+    "08:24 \u2013 Change window completed on edge firewall"
+  ],
+  "log_excerpt": "2025-09-30T08:14:22Z vpn-gateway-3 AUTH WARN radius timeout for user m.saito\n2025-09-30T08:14:27Z vpn-gateway-3 TUNNEL ERROR tunnel teardown client=10.44.18.27 cause=keepalive-missed\n2025-09-30T08:14:56Z vpn-gateway-3 AUTH ERROR certificate validation failed for cn=corp-fw\n2025-09-30T08:15:03Z vpn-gateway-3 AUTH WARN radius timeout for user a.lopez\n2025-09-30T08:15:09Z vpn-gateway-3 TUNNEL ERROR tunnel teardown client=10.44.18.42 cause=keepalive-missed\n2025-09-30T08:15:30Z vpn-gateway-3 SYSTEM INFO change-ticket=CHG-5571 applied policy-profile=edge-fw-hardening",
+  "validation_rules": "{\"required_sections\": [\"Summary\", \"Root Cause\", \"Mitigation\"], \"max_time_to_resolve_minutes\": 60}",
+  "policy_playbook": "If VPN outage impacts 25% workforce, trigger incident bridge, gather metrics, confirm recent firewall changes, roll back if needed.",
+  "human_hints": [
+    "Confirm whether CHG-5571 altered radius ACLs.",
+    "Check wifi metrics near San Jose HQ for correlated failures.",
+    "Escalate to network engineering if root cause unresolved after rollback."
+  ],
+  "post_run_note": "Bridge call resolved issues after firewall rollback; document customer communication.",
+  "incident_report_draft": "Summary: Remote VPN outage affecting multiple engineers. Root Cause: Pending investigation, suspected firewall policy update. Mitigation: Rolled back change CHG-5571, monitoring recovery."
+}

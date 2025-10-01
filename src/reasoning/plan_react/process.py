@@ -5,7 +5,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import time
-from typing import Optional
+from typing import Dict, Optional
 
 from semantic_kernel import Kernel
 from semantic_kernel.processes import ProcessBuilder
@@ -24,6 +24,10 @@ from src.context.context_assembler import AssembledContext
 from src.context.workflow_context import WorkflowContextManager
 from src.observability.feedback_store import FeedbackStore
 from src.reasoning.plan_react.steps import PlanReactExecutorStep, PlanReactPlannerStep
+from src.reasoning.plan_react.steps_enhanced import EnhancedPlanReactPlannerStep
+from src.policies.approval_service import ApprovalService
+from src.plugins.plugin_suggestions import PluginSuggestionQueue
+from src.plugins.tooling_metadata import ToolDefinition
 
 _START_EVENT_ID = "PlanReact.Start"
 _PLANNER_NAME = "Planner"
@@ -45,6 +49,10 @@ class PlanReactCoordinator:
         context_manager: Optional[WorkflowContextManager] = None,
         feedback_store: Optional[FeedbackStore] = None,
         logger: Optional[logging.Logger] = None,
+        approval_service: Optional[ApprovalService] = None,  # NEW
+        plugin_suggestions: Optional[PluginSuggestionQueue] = None,  # NEW
+        tool_manifest: Optional[Dict[str, Dict[str, ToolDefinition]]] = None,  # NEW
+        use_enhanced_planner: bool = False,  # NEW: toggle for two-phase planning
     ) -> None:
         self._kernel = kernel
         self._config = config
@@ -52,6 +60,10 @@ class PlanReactCoordinator:
         self._logger = logger or logging.getLogger(self.__class__.__name__)
         self._context_manager = context_manager
         self._feedback_store = feedback_store
+        self._approval_service = approval_service
+        self._plugin_suggestions = plugin_suggestions
+        self._tool_manifest = tool_manifest
+        self._use_enhanced_planner = use_enhanced_planner
 
         self._builder = self._compose_process()
 
@@ -118,15 +130,32 @@ class PlanReactCoordinator:
     def _compose_process(self) -> ProcessBuilder:
         builder = ProcessBuilder(name="PlanReactPipeline", kernel=self._kernel)
 
-        planner = builder.add_step(
-            PlanReactPlannerStep,
-            name=_PLANNER_NAME,
-            factory_function=lambda: PlanReactPlannerStep(
+        # Choose planner type based on configuration
+        if self._use_enhanced_planner:
+            planner = builder.add_step(
+                EnhancedPlanReactPlannerStep,
+                name=_PLANNER_NAME,
+                factory_function=lambda: EnhancedPlanReactPlannerStep(
+                    kernel=self._kernel,
+                    logger=self._logger.getChild("EnhancedPlanner"),
+                    approval_service=self._approval_service,
+                    feedback_store=self._feedback_store,
+                    telemetry=self._telemetry,
+                    plugin_suggestions=self._plugin_suggestions,
+                    tool_manifest=self._tool_manifest,
+                ),
                 kernel=self._kernel,
-                logger=self._logger.getChild("Planner"),
-            ),
-            kernel=self._kernel,
-        )
+            )
+        else:
+            planner = builder.add_step(
+                PlanReactPlannerStep,
+                name=_PLANNER_NAME,
+                factory_function=lambda: PlanReactPlannerStep(
+                    kernel=self._kernel,
+                    logger=self._logger.getChild("Planner"),
+                ),
+                kernel=self._kernel,
+            )
 
         executor = builder.add_step(
             PlanReactExecutorStep,

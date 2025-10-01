@@ -247,6 +247,32 @@ class TelemetryService:
             },
         )
 
+    def record_planning_approval(
+        self,
+        *,
+        workflow_id: str,
+        phase: str,
+        approval_type: str,
+        approved: bool,
+        reviewer: str,
+        context: Dict[str, Any],
+    ) -> None:
+        """Record planning-phase approval (separate namespace from tool execution)."""
+        # Use PlanningReview namespace to separate from execution approvals
+        self.record_agent_execution(
+            agent_name=f"PlanningReview.{phase}",
+            duration_seconds=context.get("duration_seconds", 0.0),
+            success=approved,
+            tags={
+                "workflow_id": workflow_id,
+                "phase": phase,
+                "approval_type": approval_type,
+                "approved": str(approved).lower(),
+                "reviewer": reviewer,
+                **{k: str(v) for k, v in context.items() if k != "duration_seconds"},
+            },
+        )
+
     def _initialize_tracing(self, service_name: str, service_version: str) -> None:
         """Initialize distributed tracing."""
         observability_config = self._settings.observability

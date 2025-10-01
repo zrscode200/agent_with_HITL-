@@ -24,6 +24,18 @@ class ApprovalRequirement(str, Enum):
     POLICY = "policy"
 
 
+class ToolCapability(str, Enum):
+    """Standard capability categories for tool mapping."""
+
+    DOCUMENT_PROCESSING = "document_processing"
+    WEB_ACCESS = "web_access"
+    DIAGNOSTICS = "diagnostics"
+    DATA_ANALYSIS = "data_analysis"
+    COMMUNICATION = "communication"
+    FILE_OPERATIONS = "file_operations"
+    SYSTEM_OPERATIONS = "system_operations"
+
+
 @dataclass(slots=True)
 class ToolInput:
     """Describes a single input parameter expected by a tool."""
@@ -58,6 +70,7 @@ class ToolDefinition:
     tags: Dict[str, str] = field(default_factory=dict)
     field_descriptions: Dict[str, str] = field(default_factory=dict)
     sample_output: Optional[str] = None
+    capabilities: List[ToolCapability] = field(default_factory=list)  # NEW: declare capabilities
 
     def with_updates(
         self,
@@ -102,6 +115,7 @@ def tool_spec(
     tags: Optional[Dict[str, str]] = None,
     field_descriptions: Optional[Dict[str, str]] = None,
     sample_output: Optional[str] = None,
+    capabilities: Optional[List[ToolCapability]] = None,  # NEW: declare capabilities
 ) -> Callable:
     """Attach governance metadata to a kernel_function."""
 
@@ -117,6 +131,7 @@ def tool_spec(
             tags=dict(tags) if tags else {},
             field_descriptions=dict(field_descriptions) if field_descriptions else {},
             sample_output=sample_output,
+            capabilities=list(capabilities) if capabilities else [],
         )
         setattr(func, TOOL_METADATA_ATTR, metadata)
         return func
@@ -128,6 +143,7 @@ __all__ = [
     "ApprovalRequirement",
     "PluginMetadata",
     "RiskLevel",
+    "ToolCapability",
     "ToolDefinition",
     "ToolExample",
     "ToolInput",

@@ -22,7 +22,6 @@ from src.reasoning.plan_react.models import (
     PlanReactPlannerState,
     PlanReactRequest,
     PlanReactResult,
-    StepStatus,
 )
 
 
@@ -170,33 +169,8 @@ class PlanReactExecutorStep(KernelProcessStep[PlanReactExecutorState]):
             if remaining_budget <= 0:
                 break
 
-            # Check status before executing
-            if item.status == StepStatus.MANUAL:
-                trace = self._create_manual_trace(item)
-                traces.append(trace)
-                continue
-
-            elif item.status == StepStatus.BLOCKED:
-                trace = self._create_blocked_trace(item)
-                traces.append(trace)
-                continue
-
-            elif item.status == StepStatus.SKIPPED:
-                trace = self._create_skipped_trace(item)
-                traces.append(trace)
-                continue
-
-            elif item.status == StepStatus.NEEDS_DATA:
-                # TODO: Implement runtime data request
-                trace = self._create_needs_data_trace(item)
-                traces.append(trace)
-                continue
-
-            # Execute ready steps
             thought = f"Evaluate next step {item.step_number}: {item.title}"
             action = f"Act on: {item.title}"
-            if item.plugin_name and item.tool_name:
-                action = f"Execute {item.plugin_name}.{item.tool_name} for: {item.title}"
             observation = self._simulate_observation(item, plan.context)
 
             traces.append(
@@ -235,46 +209,7 @@ class PlanReactExecutorStep(KernelProcessStep[PlanReactExecutorState]):
 
     def _simulate_observation(self, item: PlanItem, context: dict | None) -> str:
         context_hint = "" if not context else f" using context keys {', '.join(context.keys())}"
-        tool_info = ""
-        if item.plugin_name and item.tool_name:
-            tool_info = f" via {item.plugin_name}.{item.tool_name}"
-        return f"Completed analytical pass for '{item.title}'{tool_info}{context_hint}."
-
-    def _create_manual_trace(self, item: PlanItem) -> ExecutionTrace:
-        """Create trace for manual execution step."""
-        return ExecutionTrace(
-            sequence=0,  # Will be updated
-            thought=f"Step {item.step_number} marked for manual execution",
-            action=f"MANUAL: {item.title}",
-            observation=f"Step '{item.title}' requires human execution. {item.human_override or ''}",
-        )
-
-    def _create_blocked_trace(self, item: PlanItem) -> ExecutionTrace:
-        """Create trace for blocked step."""
-        return ExecutionTrace(
-            sequence=0,
-            thought=f"Step {item.step_number} is blocked",
-            action=f"BLOCKED: {item.title}",
-            observation=f"Step '{item.title}' blocked: missing capability '{item.capability}'. {item.human_override or ''}",
-        )
-
-    def _create_skipped_trace(self, item: PlanItem) -> ExecutionTrace:
-        """Create trace for skipped step."""
-        return ExecutionTrace(
-            sequence=0,
-            thought=f"Step {item.step_number} was skipped",
-            action=f"SKIPPED: {item.title}",
-            observation=f"Step '{item.title}' skipped by human decision. {item.human_override or ''}",
-        )
-
-    def _create_needs_data_trace(self, item: PlanItem) -> ExecutionTrace:
-        """Create trace for step needing data."""
-        return ExecutionTrace(
-            sequence=0,
-            thought=f"Step {item.step_number} needs runtime data",
-            action=f"NEEDS_DATA: {item.title}",
-            observation=f"Step '{item.title}' requires data: {', '.join(item.runtime_data_schema.keys())}",
-        )
+        return f"Completed analytical pass for '{item.title}'{context_hint}."
 
     def _synthesize_response(
         self,

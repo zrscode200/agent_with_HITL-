@@ -27,6 +27,7 @@ from src.context.runbook_loader import RunbookLibrary
 from src.context.example_loader import FewShotLibrary
 from src.context.workflow_context import WorkflowContextManager
 from src.observability.feedback_store import FeedbackStore
+from src.plugins.plugin_suggestions import PluginSuggestionQueue
 
 
 class AgentRuntimeBuilder:
@@ -61,6 +62,23 @@ class AgentRuntimeBuilder:
 
         context_manager = self._build_context_manager()
         feedback_store = FeedbackStore()
+        plugin_suggestions = PluginSuggestionQueue()  # NEW
+
+        policy_engine = self._build_policy_engine(plugin_manager)
+
+        approval_service = ConsoleApprovalService(
+            auto_approve=not self._settings.agent_platform.enable_human_in_the_loop,
+            telemetry=self._telemetry_service,
+            logger=self._logger.getChild("ApprovalService"),
+        )
+
+        # Get tool manifest for two-phase planning
+        tool_manifest = plugin_manager.get_tool_manifest()
+
+        # NEW: Support for enhanced two-phase planning
+        use_enhanced_planner = getattr(
+            self._settings.agent_platform, "enable_two_phase_planning", False
+        )
 
         plan_react = PlanReactCoordinator(
             kernel=self._kernel,
@@ -69,14 +87,10 @@ class AgentRuntimeBuilder:
             context_manager=context_manager,
             feedback_store=feedback_store,
             logger=self._logger.getChild("PlanReact"),
-        )
-
-        policy_engine = self._build_policy_engine(plugin_manager)
-
-        approval_service = ConsoleApprovalService(
-            auto_approve=not self._settings.agent_platform.enable_human_in_the_loop,
-            telemetry=self._telemetry_service,
-            logger=self._logger.getChild("ApprovalService"),
+            approval_service=approval_service,  # NEW
+            plugin_suggestions=plugin_suggestions,  # NEW
+            tool_manifest=tool_manifest,  # NEW
+            use_enhanced_planner=use_enhanced_planner,  # NEW
         )
 
         tool_gateway = ToolGateway(
