@@ -75,24 +75,6 @@ class AgentRuntimeBuilder:
         # Get tool manifest for two-phase planning
         tool_manifest = plugin_manager.get_tool_manifest()
 
-        # NEW: Support for enhanced two-phase planning
-        use_enhanced_planner = getattr(
-            self._settings.agent_platform, "enable_two_phase_planning", False
-        )
-
-        plan_react = PlanReactCoordinator(
-            kernel=self._kernel,
-            config=PlanReactConfiguration(),
-            telemetry_service=self._telemetry_service,
-            context_manager=context_manager,
-            feedback_store=feedback_store,
-            logger=self._logger.getChild("PlanReact"),
-            approval_service=approval_service,  # NEW
-            plugin_suggestions=plugin_suggestions,  # NEW
-            tool_manifest=tool_manifest,  # NEW
-            use_enhanced_planner=use_enhanced_planner,  # NEW
-        )
-
         tool_gateway = ToolGateway(
             kernel=self._kernel,
             plugin_manager=plugin_manager,
@@ -102,6 +84,29 @@ class AgentRuntimeBuilder:
             context_manager=context_manager,
             feedback_store=feedback_store,
             logger=self._logger.getChild("ToolGateway"),
+        )
+
+        # Planning/execution feature flags
+        use_enhanced_planner = getattr(
+            self._settings.agent_platform, "enable_two_phase_planning", False
+        )
+        use_reactive_executor = getattr(
+            self._settings.agent_platform, "enable_reactive_executor", False
+        )
+
+        plan_react = PlanReactCoordinator(
+            kernel=self._kernel,
+            config=PlanReactConfiguration(),
+            telemetry_service=self._telemetry_service,
+            context_manager=context_manager,
+            feedback_store=feedback_store,
+            logger=self._logger.getChild("PlanReact"),
+            approval_service=approval_service,
+            plugin_suggestions=plugin_suggestions,
+            tool_manifest=tool_manifest,
+            use_enhanced_planner=use_enhanced_planner,
+            use_reactive_executor=use_reactive_executor,
+            tool_gateway=tool_gateway,
         )
 
         runtime = AgentRuntime(

@@ -53,7 +53,7 @@ class EnhancedPlanReactPlannerStep(KernelProcessStep[PlanReactPlannerState]):
         self._telemetry = telemetry
         self._plugin_suggestions = plugin_suggestions
         self._tool_manifest = tool_manifest or {}
-        self._tool_mapper = ToolMapper(self._kernel, logger, telemetry)
+        self._tool_mapper = ToolMapper(self._tool_manifest, logger, telemetry)
 
     async def activate(self, state: KernelProcessStepState[PlanReactPlannerState]):
         self.state = state.state or PlanReactPlannerState()
@@ -136,11 +136,12 @@ class EnhancedPlanReactPlannerStep(KernelProcessStep[PlanReactPlannerState]):
 
         steps = []
         for idx, sentence in enumerate(sentences[:5], start=1):
+            capability = self._infer_capability(sentence, request)
             steps.append(
                 StrategicPlanItem(
                     step_number=idx,
                     title=sentence,
-                    required_capability="general",
+                    required_capability=capability,
                     success_criteria=f"Address: {sentence}",
                 )
             )
@@ -162,6 +163,20 @@ class EnhancedPlanReactPlannerStep(KernelProcessStep[PlanReactPlannerState]):
             steps=steps,
             context=request.context,
         )
+
+    def _infer_capability(self, sentence: str, request: PlanReactRequest) -> str:
+        text = sentence.lower()
+        if any(keyword in text for keyword in ["document", "report", "contract", "policy"]):
+            return "document_processing"
+        if any(keyword in text for keyword in ["http", "url", "api", "web", "fetch"]):
+            return "web_access"
+        if any(keyword in text for keyword in ["wifi", "network", "diagnostic", "metrics", "vpn", "outage"]):
+            return "diagnostics"
+        if any(keyword in text for keyword in ["analy", "data", "statistics", "trend"]):
+            return "data_analysis"
+        if any(keyword in text for keyword in ["email", "notify", "communicat"]):
+            return "communication"
+        return "general"
 
     async def _review_strategic_plan_with_human(
         self, plan: StrategicPlan, request: PlanReactRequest

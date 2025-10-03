@@ -18,6 +18,23 @@ class StepStatus(str, Enum):
     SKIPPED = "skipped"  # Human chose to skip
 
 
+class ActionType(str, Enum):
+    """Types of actions the ReAct executor can take."""
+
+    EXECUTE_TOOL = "execute_tool"  # Invoke a tool
+    SKIP_STEP = "skip_step"  # Skip current step
+    TERMINATE = "terminate"  # Task complete, stop execution
+    REQUEST_REPLAN = "request_replan"  # Observations diverge, need new plan
+
+
+class DivergenceSeverity(str, Enum):
+    """Severity levels for plan divergence."""
+
+    MINOR = "minor"  # Small deviation, can continue
+    MODERATE = "moderate"  # Significant issue, may need adjustment
+    CRITICAL = "critical"  # Plan invalid, re-planning required
+
+
 class PlanReactRequest(BaseModel):
     """User input for the deterministic Plan→ReAct pipeline."""
 
@@ -111,6 +128,28 @@ class PlanReactPlan(BaseModel):
     strategic_plan: Optional[StrategicPlan] = None  # Reference to original strategic plan
 
 
+class ActionDecision(BaseModel):
+    """Decision made by LLM about next action to take."""
+
+    action_type: ActionType
+    tool_name: Optional[str] = None  # For EXECUTE_TOOL: "plugin.tool"
+    parameters: Dict[str, Any] = Field(default_factory=dict)  # Tool parameters
+    rationale: str = Field(default="", description="Why this action was chosen")
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0)
+
+
+class DivergenceSignal(BaseModel):
+    """Signal indicating execution has diverged from plan expectations."""
+
+    severity: DivergenceSeverity
+    step_number: int
+    reason: str
+    observed_state: str
+    expected_state: str
+    recommendation: ActionType  # What to do about it
+    context: Dict[str, Any] = Field(default_factory=dict)
+
+
 class ExecutionTrace(BaseModel):
     """Trace for a single reasoning-action-observation loop."""
 
@@ -118,6 +157,20 @@ class ExecutionTrace(BaseModel):
     thought: str
     action: str
     observation: str
+    action_decision: Optional[ActionDecision] = None  # LLM's decision for this step
+    divergence: Optional[DivergenceSignal] = None  # Detected divergence if any
+
+
+class ReplanContext(BaseModel):
+    """Context for re-planning after divergence detected."""
+
+    original_plan: PlanReactPlan
+    execution_history: List[ExecutionTrace]
+    scratchpad: List[Dict[str, Any]]
+    divergence: DivergenceSignal
+    completed_steps: List[int]
+    remaining_budget: int
+    lessons_learned: List[str] = Field(default_factory=list)
 
 
 class PlanReactResult(BaseModel):
@@ -130,6 +183,8 @@ class PlanReactResult(BaseModel):
     traces: List[ExecutionTrace] = Field(default_factory=list)
     extension_requested: bool = False
     extension_message: Optional[str] = None
+    replan_requested: bool = False
+    replan_context: Optional[ReplanContext] = None
 
 
 class PlanReactPlannerState(BaseModel):
@@ -143,6 +198,7 @@ class PlanReactExecutorState(BaseModel):
 
     last_result: Optional[PlanReactResult] = None
     remaining_budget: int = 0
+    scratchpad: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class PlanReactConfiguration(BaseModel):
@@ -151,4 +207,8 @@ class PlanReactConfiguration(BaseModel):
     default_step_budget: PositiveInt = Field(default=6, description="Fallback step limit when request omits it.")
     max_supersteps: PositiveInt = Field(
         default=120, description="Safety limit for the underlying process superstep execution."
+    )
+    max_replans: PositiveInt = Field(default=2, description="Maximum number of re-planning attempts.")
+    enable_auto_replan: bool = Field(
+        default=True, description="Automatically trigger re-planning on critical divergence."
     )

@@ -12,6 +12,7 @@ from .base_plugin import BasePlugin
 from .tooling_metadata import (
     ApprovalRequirement,
     RiskLevel,
+    ToolCapability,
     ToolInput,
     tool_spec,
 )
@@ -93,6 +94,7 @@ class DocumentProcessingPlugin(BasePlugin):
             "key_topics": "List of detected topics",
         },
         sample_output='{"word_count": 500, "language": "en", "key_topics": ["SLA", "Pricing"]}',
+        capabilities=[ToolCapability.DOCUMENT_PROCESSING],
     )
     @kernel_function(
         name="analyze_document",
@@ -155,6 +157,7 @@ class DocumentProcessingPlugin(BasePlugin):
             "warnings": "List of non-blocking warnings",
         },
         sample_output='{"is_valid": false, "issues": ["Missing signature page"], "warnings": []}',
+        capabilities=[ToolCapability.DOCUMENT_PROCESSING],
     )
     @kernel_function(
         name="validate_document",
@@ -213,6 +216,7 @@ class DocumentProcessingPlugin(BasePlugin):
             "items": "List of extracted values",
             "information_type": "Extraction category",
         },
+        capabilities=[ToolCapability.DOCUMENT_PROCESSING],
     )
     @kernel_function(
         name="extract_information",
@@ -272,6 +276,7 @@ class DocumentProcessingPlugin(BasePlugin):
             "content": "Transformed document content",
             "target_format": "Requested output format",
         },
+        capabilities=[ToolCapability.DOCUMENT_PROCESSING, ToolCapability.DATA_ANALYSIS],
     )
     @kernel_function(
         name="transform_document",

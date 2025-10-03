@@ -51,6 +51,14 @@ class AgentPlatformConfig(BaseModel):
     enable_human_in_the_loop: bool = Field(default=True, description="Enable HITL workflows")
     approval_timeout_seconds: int = Field(default=1800, description="Approval timeout in seconds")
     notifications: NotificationConfig = Field(default_factory=NotificationConfig)
+    enable_two_phase_planning: bool = Field(
+        default=False,
+        description="Enable strategic+tactical planning with capability-aware mapping",
+    )
+    enable_reactive_executor: bool = Field(
+        default=False,
+        description="Enable ReAct-style executor that adapts after each observation",
+    )
 
 
 class Settings(BaseSettings):

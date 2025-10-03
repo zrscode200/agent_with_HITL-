@@ -8,7 +8,7 @@ from typing import Optional
 from semantic_kernel.functions.kernel_function_decorator import kernel_function
 
 from src.plugins.base_plugin import BasePlugin
-from src.plugins.tooling_metadata import tool_spec, ToolInput, RiskLevel, ApprovalRequirement
+from src.plugins.tooling_metadata import tool_spec, ToolInput, RiskLevel, ApprovalRequirement, ToolCapability
 
 DATA_DIR = Path("examples/sim-real-world/network-rca/data")
 
@@ -44,6 +44,7 @@ class WifiDiagnosticsPlugin(BasePlugin):
             "affected_components": "List of APs/controllers involved",
         },
         sample_output='{"alerts": [{"id": "alert-001", "severity": "critical", "message": "..."}]}',
+        capabilities=[ToolCapability.DIAGNOSTICS],
     )
     @kernel_function(name="list_alerts", description="Return current Wi-Fi alerts")
     async def list_alerts_async(self) -> str:
@@ -59,6 +60,7 @@ class WifiDiagnosticsPlugin(BasePlugin):
             "controllers": "List of controllers and connected switches",
             "access_points": "List of APs with locations and controllers",
         },
+        capabilities=[ToolCapability.DIAGNOSTICS],
     )
     @kernel_function(name="inspect_topology", description="Return Wi-Fi topology")
     async def inspect_topology_async(self) -> str:
@@ -78,6 +80,7 @@ class WifiDiagnosticsPlugin(BasePlugin):
             "client_count": "Number of connected clients",
             "auth_failures": "Authentication failure count",
         },
+        capabilities=[ToolCapability.DIAGNOSTICS],
     )
     @kernel_function(name="fetch_metrics", description="Fetch Wi-Fi metrics")
     async def fetch_metrics_async(self, entity: Optional[str] = None) -> str:
@@ -102,6 +105,7 @@ class WifiDiagnosticsPlugin(BasePlugin):
             "description": "Change details",
             "timestamp": "When the change occurred",
         },
+        capabilities=[ToolCapability.DIAGNOSTICS],
     )
     @kernel_function(name="check_change_log", description="Return recent change records")
     async def check_change_log_async(self, component: Optional[str] = None) -> str:

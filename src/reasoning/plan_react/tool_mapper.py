@@ -7,8 +7,6 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
-from semantic_kernel import Kernel
-
 from src.plugins.tooling_metadata import ToolCapability, ToolDefinition
 from src.observability.telemetry_service import TelemetryService
 
@@ -44,50 +42,41 @@ class ToolMapper:
 
     def __init__(
         self,
-        kernel: Kernel,
+        tool_manifest: Dict[str, Dict[str, ToolDefinition]],
         logger: Optional[logging.Logger] = None,
         telemetry: Optional[TelemetryService] = None,
     ):
-        self._kernel = kernel
+        self._tool_manifest = tool_manifest
         self._logger = logger or logging.getLogger(self.__class__.__name__)
         self._telemetry = telemetry
 
-        # Build capability registry from plugin metadata (not hardcoded!)
+        # Build capability registry from tool metadata (not hardcoded!)
         self._capability_registry = self._build_capability_registry()
 
     def _build_capability_registry(self) -> Dict[str, List[Tuple[str, str]]]:
-        """Build registry from plugin metadata (plugin authors declare capabilities)."""
+        """Build registry from tool metadata provided by PluginManager."""
         registry: Dict[str, List[Tuple[str, str]]] = defaultdict(list)
 
-        # Get all plugins from kernel
-        plugins = getattr(self._kernel, "plugins", {}) or {}
+        for plugin_name, tools in self._tool_manifest.items():
+            for tool_name, definition in tools.items():
+                capabilities = definition.capabilities or []
+                for capability in capabilities:
+                    capability_key = (
+                        capability.value if isinstance(capability, ToolCapability) else str(capability)
+                    )
+                    registry[capability_key].append((plugin_name, tool_name))
 
-        for plugin_name, plugin in plugins.items():
-            # Get functions from plugin
-            functions = getattr(plugin, "functions", {}) or {}
-
-            for function_name, function in functions.items():
-                # Extract metadata if available
-                from src.plugins.tooling_metadata import TOOL_METADATA_ATTR
-
-                metadata = getattr(function.metadata, TOOL_METADATA_ATTR, None)
-                if metadata and hasattr(metadata, "capabilities") and metadata.capabilities:
-                    for capability in metadata.capabilities:
-                        capability_key = (
-                            capability.value if isinstance(capability, ToolCapability) else str(capability)
-                        )
-                        registry[capability_key].append((plugin_name, function_name))
-
-        self._logger.info(f"Built capability registry: {len(registry)} capabilities mapped")
+        self._logger.info("Built capability registry: %s capabilities mapped", len(registry))
         return dict(registry)
 
     def map_step_to_tools(
         self,
         step: StrategicStep,
-        tool_manifest: Dict[str, Dict[str, ToolDefinition]],
+        tool_manifest: Optional[Dict[str, Dict[str, ToolDefinition]]] = None,
     ) -> ToolMapping:
         """Map strategic step to tools using capability-based matching."""
 
+        manifest = tool_manifest or self._tool_manifest
         required_capability = step.required_capability
 
         # Normalize capability (handle enum or string)
@@ -111,7 +100,7 @@ class ToolMapper:
                 )
 
         # Fuzzy match by description
-        fuzzy_result = self._fuzzy_match_tools(step, tool_manifest)
+        fuzzy_result = self._fuzzy_match_tools(step, manifest)
 
         if fuzzy_result and fuzzy_result["confidence"] > 0.6:
             # Log fuzzy match for compliance

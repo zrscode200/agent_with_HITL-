@@ -13,6 +13,7 @@ from .base_plugin import BasePlugin
 from .tooling_metadata import (
     ApprovalRequirement,
     RiskLevel,
+    ToolCapability,
     ToolInput,
     tool_spec,
 )
@@ -97,6 +98,7 @@ class HttpWebPlugin(BasePlugin):
             "headers": "Response headers",
             "content": "Response body or snippet",
         },
+        capabilities=[ToolCapability.WEB_ACCESS],
     )
     @kernel_function(
         name="http_get",
@@ -194,6 +196,7 @@ class HttpWebPlugin(BasePlugin):
             "headers": "Response headers",
             "content": "Response JSON content or raw text",
         },
+        capabilities=[ToolCapability.WEB_ACCESS],
     )
     @kernel_function(
         name="http_post",
@@ -301,6 +304,7 @@ class HttpWebPlugin(BasePlugin):
             "status_code": "HTTP status code",
             "response_size": "Number of bytes in the response",
         },
+        capabilities=[ToolCapability.WEB_ACCESS, ToolCapability.DATA_ANALYSIS],
     )
     @kernel_function(
         name="fetch_json_data",
@@ -405,6 +409,7 @@ class HttpWebPlugin(BasePlugin):
             "response_time_ms": "Latency measurement in milliseconds",
             "redirect_url": "Final URL after redirects, if any",
         },
+        capabilities=[ToolCapability.DIAGNOSTICS, ToolCapability.WEB_ACCESS],
     )
     @kernel_function(
         name="check_url_status",

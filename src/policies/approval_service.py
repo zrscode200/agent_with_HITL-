@@ -192,7 +192,10 @@ class ConsoleApprovalService(ApprovalService):
             reason = "Invalid choice; defaulting to skip"
 
         # Optional: capture additional notes
-        note = self._input_fn("Additional notes (optional, press Enter to skip): ").strip()
+        try:
+            note = self._input_fn("Additional notes (optional, press Enter to skip): ").strip()
+        except EOFError:
+            note = ""
         if note:
             reason = f"{reason}. Notes: {note}"
 
@@ -228,7 +231,10 @@ class ConsoleApprovalService(ApprovalService):
             answer = ""
 
         approved = answer in {"y", "yes"}
-        note = self._input_fn("Feedback or revisions (press Enter to skip): ").strip()
+        try:
+            note = self._input_fn("Feedback or revisions (press Enter to skip): ").strip()
+        except EOFError:
+            note = ""
         reason = note or ("strategic plan approved" if approved else "strategic plan rejected")
 
         return ApprovalDecision(
